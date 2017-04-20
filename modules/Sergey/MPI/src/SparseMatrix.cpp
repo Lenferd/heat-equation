@@ -106,15 +106,15 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
 
                 // X Group center
                 sp.values[index] = taskexpr.x1;
-                sp.columns[index] = fixBounds + x - 1;
+                sp.columns[index] = sectionStart + fixBounds + x - 1;
                 ++index;
 
                 sp.values[index] = taskexpr.x2Comp;
-                sp.columns[index] = fixBounds + x;
+                sp.columns[index] = sectionStart + fixBounds + x;
                 ++index;
 
                 sp.values[index] = taskexpr.x1;
-                sp.columns[index] = fixBounds + x + 1;
+                sp.columns[index] = sectionStart + fixBounds + x + 1;
                 ++index;
 
                 // Y second
