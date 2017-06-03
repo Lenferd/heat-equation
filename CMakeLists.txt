@@ -1,4 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
+
+#find_program(ICC_PATH icc)
+#find_program(ICPC_PATH icpc)
+#
+#set(CMAKE_CXX_COMPILER ${ICPC_PATH})
+#set(CMAKE_C_COMPILER ${ICC_PATH})
+
 project(heat-equation)
 
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -10,9 +17,9 @@ if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}    ${OpenMP_C_FLAGS}")
 endif()
 
-message(STATUS ${CMAKE_C_FLAGS})
+find_package( MPI REQUIRED )
+include_directories( ${MPI_INCLUDE_PATH} )
 
-get_filename_component(DIR_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
-set(MODULE "${DIR_NAME}")
+find_library(M_LIB m)
 
 add_subdirectory(modules)
