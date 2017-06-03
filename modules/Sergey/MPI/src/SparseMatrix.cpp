@@ -14,10 +14,10 @@ void spMatrixInit(SparseMatrix &sp, int size, int rows) {
 
 void multiplicateVector(SparseMatrix &sp, double *&vect, double *&result, int size) {
 
-    omp_set_num_threads(4);
+    omp_set_num_threads(1);
 
     #pragma omp parallel for if (ENABLE_PARALLEL)
-    for (int i = 0; i < size; i++){  // iteration FOR RESULT VECTOR!!!
+    for (int i = 0; i < size; i++) {
         double local_result = 0;
         for (int j = sp.pointerB[i]; j < sp.pointerB[i+1]; j++) {
             local_result += sp.values[j] * vect[sp.columns[j]];
@@ -141,7 +141,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
 }
 
 void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ) {
-    int realSizeX = sizeX + 2;
+    int realSizeX = sizeX;
     int realSizeY = realSizeX;
     int realSizeZ = realSizeY * sizeY;
     int index = 0;
@@ -171,15 +171,15 @@ void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, in
 
                 // X Group center
                 sp.values[index] = taskexpr.x1;
-                sp.columns[index] = x - 1;
+                sp.columns[index] = sectionStart + x - 1;
                 ++index;
 
                 sp.values[index] = taskexpr.x2Comp;
-                sp.columns[index] = x;
+                sp.columns[index] = sectionStart + x;
                 ++index;
 
                 sp.values[index] = taskexpr.x1;
-                sp.columns[index] = x + 1;
+                sp.columns[index] = sectionStart + x + 1;
                 ++index;
 
                 // Y second

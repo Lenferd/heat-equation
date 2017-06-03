@@ -35,9 +35,9 @@ int main(int argc, char** argv) {
 
     // value for the matrix
     MatrixValue matrixValue;
-    matrixValue.x1 = (task.sigma * task.dt) / (task.timeStepX * task.timeStepX);
-    matrixValue.y1 = (task.sigma * task.dt) / (task.timeStepY * task.timeStepY);
-    matrixValue.z1 = (task.sigma * task.dt) / (task.timeStepZ * task.timeStepZ);
+    matrixValue.x1 = (task.sigma * task.dt) / (task.stepX * task.stepX);
+    matrixValue.y1 = (task.sigma * task.dt) / (task.stepY * task.stepY);
+    matrixValue.z1 = (task.sigma * task.dt) / (task.stepZ * task.stepZ);
     matrixValue.x2Comp = (1 - 2 * matrixValue.x1 - 2 * matrixValue.y1 - 2 * matrixValue.z1);
 
     // init and fill sparseMatrix

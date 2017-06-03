@@ -17,9 +17,9 @@ struct Task {
     double  sigma;          //
     int     bc;             // not used
 
-    double  timeStepX;       // time time between calculating
-    double  timeStepY;
-    double  timeStepZ;
+    double  stepX;       // time time between calculating
+    double  stepY;
+    double  stepZ;
 
     int     nX;             // count of initial elements
     int     nY;

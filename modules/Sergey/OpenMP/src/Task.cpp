@@ -56,10 +56,10 @@ int initTaskUsingFile(Task &task, string settingFile) {
 }
 
 int setTimestep(Task &task){
-    task.timeStepX = (fabs(task.xStart) + fabs(task.xEnd)) / task.nX;
+    task.stepX = (fabs(task.xStart) + fabs(task.xEnd)) / task.nX;
 
-    task.timeStepY = (fabs(task.xStart) + fabs(task.xEnd)) / task.nY;
-    task.timeStepZ = (fabs(task.xStart) + fabs(task.xEnd)) / task.nZ;
+    task.stepY = (fabs(task.xStart) + fabs(task.xEnd)) / task.nY;
+    task.stepZ = (fabs(task.xStart) + fabs(task.xEnd)) / task.nZ;
 }
 
 int initMemoryReadData(double **& vect, string file, Task &task) {

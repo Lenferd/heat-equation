@@ -45,9 +45,9 @@ int main(int argc, char** argv) {
      */
     // value for the matrix
     MatrixValue matrixValueK1;
-    matrixValueK1.x1 = (task.sigma) / (task.timeStepX * task.timeStepX);
-    matrixValueK1.y1 = (task.sigma) / (task.timeStepY * task.timeStepY);
-    matrixValueK1.z1 = (task.sigma) / (task.timeStepZ * task.timeStepZ);
+    matrixValueK1.x1 = (task.sigma) / (task.stepX * task.stepX);
+    matrixValueK1.y1 = (task.sigma) / (task.stepY * task.stepY);
+    matrixValueK1.z1 = (task.sigma) / (task.stepZ * task.stepZ);
     matrixValueK1.x2Comp = (- 2 * matrixValueK1.x1 - 2 * matrixValueK1.y1 - 2 * matrixValueK1.z1);
 
     // init and fill sparseMatrix
@@ -62,9 +62,9 @@ int main(int argc, char** argv) {
     */
     // value for the matrix
     MatrixValue matrixValueK2;
-    matrixValueK2.x1 = (task.sigma * task.dt * 0.5) / (task.timeStepX * task.timeStepX);
-    matrixValueK2.y1 = (task.sigma * task.dt * 0.5) / (task.timeStepY * task.timeStepY);
-    matrixValueK2.z1 = (task.sigma * task.dt * 0.5) / (task.timeStepZ * task.timeStepZ);
+    matrixValueK2.x1 = (task.sigma * task.dt * 0.5) / (task.stepX * task.stepX);
+    matrixValueK2.y1 = (task.sigma * task.dt * 0.5) / (task.stepY * task.stepY);
+    matrixValueK2.z1 = (task.sigma * task.dt * 0.5) / (task.stepZ * task.stepZ);
     matrixValueK2.x2Comp = (1 - 2 * matrixValueK2.x1 - 2 * matrixValueK2.y1 - 2 * matrixValueK2.z1);
 
     // init and fill sparseMatrix
@@ -79,9 +79,9 @@ int main(int argc, char** argv) {
     */
     // value for the matrix
     MatrixValue matrixValueK4;
-    matrixValueK4.x1 = (task.sigma * task.dt) / (task.timeStepX * task.timeStepX);
-    matrixValueK4.y1 = (task.sigma * task.dt) / (task.timeStepY * task.timeStepY);
-    matrixValueK4.z1 = (task.sigma * task.dt) / (task.timeStepZ * task.timeStepZ);
+    matrixValueK4.x1 = (task.sigma * task.dt) / (task.stepX * task.stepX);
+    matrixValueK4.y1 = (task.sigma * task.dt) / (task.stepY * task.stepY);
+    matrixValueK4.z1 = (task.sigma * task.dt) / (task.stepZ * task.stepZ);
     matrixValueK4.x2Comp = (1 - 2 * matrixValueK4.x1 - 2 * matrixValueK4.y1 - 2 * matrixValueK4.z1);
 
     // init and fill sparseMatrix

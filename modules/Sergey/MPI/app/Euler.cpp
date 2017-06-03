@@ -8,13 +8,11 @@ using std::cout;
 using std::endl;
 using std::flush;
 
-double getVectorValue(double *vect, int x, int y, int z, Task task);
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
     // Timing variables
     double startTime, endTime;
     const int ROOT = 0;
-//    const int ADD_CELL = 2;  // Additional cell (in each size)
 
     int sizeP, rankP;
     MPI_Status status;
@@ -27,14 +25,19 @@ int main(int argc, char** argv) {
 
     double *vect;
 
+    string outfilename = "../../../../../result/Sergey-N/MPI_Euler_1.txt";
+
     if (rankP == ROOT) {
+
+        printf("Start\n");
         // File variables
 //        string functionFile = "../../initial/function.txt";
-        string functionFile = "../../initial/function2.txt";
-//        string functionFile = "../../initial_test/function.txt";
+        string functionFile = "../../../../../initial/function2.txt";
+//        string functionFile = "../../../../../initial_test/function.txt";
 //        string settingFile = "../../initial/setting.ini";
-        string settingFile = "../../initial/setting2.ini";
-//        string settingFile = "../../initial_test/setting.ini";
+//        string settingFile = "../../../../../initial/setting.ini";
+        string settingFile = "../../../../../initial/setting2.ini";
+//        string settingFile = "../../../../../initial_test/setting.ini";
 
         // Read task settings
         initTaskUsingFile(task, settingFile);
@@ -64,74 +67,90 @@ int main(int argc, char** argv) {
     MPI_Bcast(&task.dt, 1, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
 
-    if (sizeP % 4 != 0) {
+    if (sizeP % 2 != 0) {
         cout << "Error! Wrong proc count" << endl;
         exit(0);
     }
 
-    int realSizeX = task.nX + 2;
-    int realSizeY = realSizeX;
-    int realSizeZ = realSizeY * task.nY;
+    if (rankP == ROOT) {
+        printf("Define variables\n");
+    }
+    int full_sizeX = task.nX + 2;    // define addition boundaries as default condition
+    int sizeY = full_sizeX;          // size of one "y" cell
+    int sizeZ = sizeY * task.nY;
 
-    int lineSizeP = sizeP / 2;
-    int proc_nX = realSizeX;
-    int proc_nY = task.nY / lineSizeP;
-    int proc_nZ = task.nZ / lineSizeP;
+    int lineSizeP = 2;                      // proc in line
+    int rowP = sizeP / 2;
+    int proc_nX = full_sizeX;               // already added as default boundaries cell
+    int proc_nY = task.nY / lineSizeP + 2;  // there and after +2 as boundaries conditions
+    int proc_nZ = task.nZ / rowP + 2;
+
     int proc_vect_size = proc_nX * proc_nY * proc_nZ;
-    int block_size = proc_nX * proc_nY;
-//    int block_size_add = block_size + ADD_CELL * 2;
 
-    int proc_realSizeY = realSizeX;
-    int proc_realSizeZ = proc_realSizeY * proc_nY;
 
+
+    int full_proc_sizeX = proc_nX;
+    int proc_sizeY = full_proc_sizeX;
+    int proc_sizeZ = proc_sizeY * proc_nY;  // this is size of one line of data
+
+    int block_size_without_boundaries = proc_nX * (task.nY / lineSizeP);
+    int block_size = proc_sizeZ;
 
     // Generate data for send
     double *sendvect;
 
     if (rankP == ROOT) {
-        sendvect = new double [sizeP * proc_vect_size];
+        sendvect = new double[sizeP * proc_vect_size];
 
         for (int i = 0; i < sizeP * proc_vect_size; ++i) {
-            sendvect[i] = -1000;
+            sendvect[i] = 0;
         }
+//
+//        cout << "sizeP: " << sizeP << endl;
+//        cout << "proc_nX: " << proc_nX << endl;
+//        cout << "proc_nY: " << proc_nY << endl;
+//        cout << "proc_nZ: " << proc_nZ << endl;
+//        cout << "block_size: " << block_size << endl;
+//        cout << "proc_vect_size: " << proc_vect_size << endl;
 
-        cout << "sizeP: " << sizeP << endl;
-        cout << "proc_nX: " << proc_nX << endl;
-        cout << "proc_nY: " << proc_nY << endl;
-        cout << "proc_nZ: " << proc_nZ << endl;
-        cout << "block_size: " << block_size << endl;
-        cout << "proc_vect_size: " << proc_vect_size << endl;
+//        printf("SEND!!!!!!\n");
+//        for (int i = 0; i < task.fullVectSize; ++i) {
+//            printf( "%2.15le\n", vect[i]);
+//        }
 
-//        cout << ": " <<  << endl;
 
-//        startTime = MPI_Wtime();
-
+        int position = 0;
         for (int p = 0; p < sizeP; ++p) {
-            int proc_lvl_offset = (p / lineSizeP) * lineSizeP * proc_nZ * proc_realSizeZ;
-            int fist_second_offset = (p % lineSizeP) * proc_nY * proc_realSizeY;
+
+            int y_offset = (p % lineSizeP) * block_size_without_boundaries;
+            int z_offset = (p / lineSizeP) * lineSizeP * (proc_nZ - 2) * block_size_without_boundaries;
+
             for (int z = 0; z < proc_nZ; ++z) {
-                for (int i = 0; i < block_size; ++i) {
-                    sendvect[p * proc_vect_size + z * block_size + i] =
-                            vect[proc_lvl_offset + fist_second_offset + z * realSizeZ + i];
+                for (int i = 0, j = 0; i < block_size; ++i) {
+                    position = p * proc_vect_size + z * block_size + i;
+                    if (z == 0 || z == proc_nZ - 1) {   // for each process (top and bottom)
+                        sendvect[position] = 0;
+                    } else if (i / full_proc_sizeX == 0 || (i + full_proc_sizeX) / block_size == 1) { // first and last
+                        sendvect[position] = 0;
+                    } else {
+                        sendvect[position] = vect[z_offset + y_offset + (z - 1) * sizeZ + j];
+                        ++j;
+                    }
                 }
             }
         }
 
-//        endTime = MPI_Wtime();
-//        printf("Repack run time %.15lf\n", endTime - startTime);
-    }
-
-//    if (rankP == ROOT) {
+//        printf("=========\n");
 //        for (int i = 0; i < sizeP * proc_vect_size; ++i) {
-//            cout << i << "  " << sendvect[i] << endl;
+//            printf( "%2.15le\n", sendvect[i]);
 //        }
-//    }
 
+    }
 
     int *displs = new int[sizeP];
     int *sendcounts = new int[sizeP];
 
-    double **proc_vect = new double*[2];
+    double **proc_vect = new double *[2];
     proc_vect[0] = new double[proc_vect_size];
     proc_vect[1] = new double[proc_vect_size];
 
@@ -145,12 +164,6 @@ int main(int argc, char** argv) {
                  proc_vect[0], proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
 
-//    if (rankP == 3) {
-//        cout << "print vectors ========" << endl;
-//        for (int i = 0; i < proc_vect_size; ++i) {
-//            cout << proc_vect[0][i] << endl << flush;
-//        }
-//    }
 
     MPI_Barrier(MPI_COMM_WORLD);
     // value for the matrix
@@ -160,45 +173,35 @@ int main(int argc, char** argv) {
     matrixValue.z1 = (task.sigma * task.dt) / (task.timeStepZ * task.timeStepZ);
     matrixValue.x2Comp = (1 - 2 * matrixValue.x1 - 2 * matrixValue.y1 - 2 * matrixValue.z1);
 
-//    cout << "matrixValue.x1: " << matrixValue.x1 << endl;
-//    cout << "matrixValue.y1: " << matrixValue.y1 << endl;
-//    cout << "matrixValue.z1: " << matrixValue.z1 << endl;
-//    cout << "matrixValue.x2C: " << matrixValue.x2Comp << endl;
-
     // init and fill sparseMatrix
     SparseMatrix spMat;
     int sparseMatrixSize = 9 * proc_nX * proc_nY * proc_nZ;
 
     spMatrixInit(spMat, sparseMatrixSize, proc_vect_size);
 
-//    cout << "proc_vect_size: " << proc_vect_size << endl;
-    // КОСТЫЛИИИИИИИИИИИИИИИИИи
-    fillMatrix3d6Expr_wo_boundaries(spMat, matrixValue, proc_nX - 2, proc_nY, proc_nZ);
+    fillMatrix3d6Expr_wo_boundaries(spMat, matrixValue, proc_nX, proc_nY, proc_nZ);
 
 
-    proc_realSizeY = realSizeX;
-    proc_realSizeZ = proc_realSizeY * proc_nY;
-
-    int prevTime = 0;
-    int currTime = 1;
+    int prevTime = 1;
+    int currTime = 0;
 
     startTime = MPI_Wtime();
 
-    int send_vect_size = proc_nZ * proc_nX; // Because nY don't involved
+    int send_vect_size = proc_nZ * proc_nX; // Because nY don't involved (left right)
     double *left_vect = new double[send_vect_size];
     double *right_vect = new double[send_vect_size];
 
     for (double j = 0; j < task.tFinish; j += task.dt) {
-        multiplicateVector(spMat, proc_vect[prevTime], proc_vect[currTime], proc_vect_size);
 
-        // After each iteration swap data
-
+        // Before each iteration - swap data
         // 1 and 2 iter - IT'S TIME TO REPACK
+
         for (int z = 0; z < proc_nZ; ++z) {
             for (int i = 0; i < proc_nX; ++i) {
-                left_vect[z * proc_nX + i] = proc_vect[currTime][z * proc_realSizeZ + i];
-                right_vect[z * proc_nX + i]
-                        = proc_vect[currTime][z * proc_realSizeZ + (proc_nY - 1) * proc_realSizeY + i];
+                //z * proc_sizeZ + i
+                left_vect[z * proc_nX + i] = proc_vect[currTime][z * proc_sizeZ + proc_sizeY + i];
+                //z * proc_sizeZ + (proc_nY - 1) * proc_sizeY + i
+                right_vect[z * proc_nX + i] = proc_vect[currTime][z * proc_sizeZ + (proc_nY - 2) * proc_sizeY + i];
             }
         }
 
@@ -207,17 +210,18 @@ int main(int argc, char** argv) {
 
         MPI_Sendrecv(left_vect, send_vect_size, MPI_DOUBLE, left_proc, 0,
                      left_vect, send_vect_size, MPI_DOUBLE, right_proc, 0, MPI_COMM_WORLD, &status);
-
+//
         MPI_Sendrecv(right_vect, send_vect_size, MPI_DOUBLE, right_proc, 0,
                      right_vect, send_vect_size, MPI_DOUBLE, left_proc, 0, MPI_COMM_WORLD, &status);
-
+//
         for (int z = 0; z < proc_nZ; ++z) {
             for (int i = 0; i < proc_nX; ++i) {
-                proc_vect[currTime][z * proc_realSizeZ + i] = left_vect[z * proc_nX + i];
-                proc_vect[currTime][z * proc_realSizeZ + (proc_nY - 1) * proc_realSizeY + i] = right_vect[z * proc_nX + i];
+                proc_vect[currTime][z * proc_sizeZ + i] = left_vect[z * proc_nX + i];
+                proc_vect[currTime][z * proc_sizeZ + (proc_nY - 1) * proc_sizeY + i] =
+                        right_vect[z * proc_nX + i];
             }
         }
-
+//
         int top_proc = (rankP - lineSizeP + sizeP) % sizeP;
         int bottom_proc = (rankP + lineSizeP) % sizeP;
 
@@ -227,29 +231,34 @@ int main(int argc, char** argv) {
         // 1 and 2 iter - in one field in the memory
         send_vect_size = proc_nY * proc_nX;
         // top
-        MPI_Sendrecv(proc_vect[currTime], send_vect_size, MPI_DOUBLE, top_proc, 0,
+        MPI_Sendrecv(proc_vect[currTime] + proc_sizeZ, send_vect_size, MPI_DOUBLE, top_proc, 0,
                      proc_vect[currTime], send_vect_size, MPI_DOUBLE, bottom_proc, 0, MPI_COMM_WORLD, &status);
 
         // bottom
         int offset = proc_vect_size - send_vect_size;
-        MPI_Sendrecv(proc_vect[currTime] + offset, send_vect_size, MPI_DOUBLE, bottom_proc, 0,
+        MPI_Sendrecv(proc_vect[currTime] + offset - proc_sizeZ, send_vect_size, MPI_DOUBLE, bottom_proc, 0,
                      proc_vect[currTime] + offset, send_vect_size, MPI_DOUBLE, top_proc, 0, MPI_COMM_WORLD, &status);
 
+//
+        int boundaries_offset = proc_sizeY;
 
-        int boundaries_offset = proc_realSizeY;
         // BOUNDARIES!
         for (int k = 0; k < proc_nY * proc_nZ; ++k) {
             proc_vect[currTime][k * boundaries_offset] = proc_vect[currTime][k * boundaries_offset + 1];
             proc_vect[currTime][k * boundaries_offset + proc_nX - 1] =
                     proc_vect[currTime][k * boundaries_offset + proc_nX - 2];
         }
+
+        multiplicateVector(spMat, proc_vect[currTime], proc_vect[prevTime], proc_vect_size);
+
+
         prevTime = (prevTime + 1) % 2;
         currTime = (currTime + 1) % 2;
     }
 
     // And now we should scatter it in one vector...
 
-    MPI_Gather(proc_vect[0], proc_vect_size, MPI_DOUBLE,
+    MPI_Gather(proc_vect[prevTime], proc_vect_size, MPI_DOUBLE,
                sendvect, proc_vect_size, MPI_DOUBLE, ROOT, MPI_COMM_WORLD);
 
 //    if (rankP == ROOT) {
@@ -265,37 +274,59 @@ int main(int argc, char** argv) {
 
     if (rankP == ROOT) {
         for (int j = 0; j < task.fullVectSize; ++j) {
-            vect[j] = -10000;
+            vect[j] = -330000;
         }
 
+//        printf("=========\n");
+//        for (int i = 0; i < sizeP * proc_vect_size; ++i) {
+//            printf( "%2.15le\n", sendvect[i]);
+//        }
+
+        cout << "full vect size: " << task.fullVectSize << endl;
+        cout << "nX: " << task.nX << endl;
+        cout << "nY: " << task.nY << endl;
+        cout << "nZ: " << task.nZ << endl;
+        cout << endl;
         cout << "sizeP: " << sizeP << endl;
         cout << "proc_nX: " << proc_nX << endl;
         cout << "proc_nY: " << proc_nY << endl;
         cout << "proc_nZ: " << proc_nZ << endl;
         cout << "block_size: " << block_size << endl;
         cout << "proc_vect_size: " << proc_vect_size << endl;
-        cout << "realSizeZ: " << realSizeZ << endl;
+        cout << "sizeZ: " << sizeZ << endl;
         cout << "lineSizeP: " << lineSizeP << endl;
-//        cout << ": " <<  << endl;
 
+
+        int temp;
+        int position = 0;
         for (int p = 0; p < sizeP; ++p) {
-            int proc_lvl_offset = (p / lineSizeP) * lineSizeP * proc_nZ * proc_realSizeZ;
-            int fist_second_offset = (p % lineSizeP) * proc_nY * proc_realSizeY;
+
+            int y_offset = (p % lineSizeP) * block_size_without_boundaries;
+            int z_offset = (p / lineSizeP) * lineSizeP * (proc_nZ - 2) * block_size_without_boundaries;
+
             for (int z = 0; z < proc_nZ; ++z) {
-                for (int i = 0; i < block_size; ++i) {
-                    vect[proc_lvl_offset + fist_second_offset + z * realSizeZ + i] =
-                            sendvect[p * proc_vect_size + z * block_size + i];
+                for (int i = 0, j = 0; i < block_size; ++i) {
+                    position = p * proc_vect_size + z * block_size + i;
+                    if (z == 0 || z == proc_nZ - 1) {   // for each process (top and bottom)
+                        ;
+                    } else if (i / full_proc_sizeX == 0 || (i + full_proc_sizeX) / block_size == 1) { // first and last
+                        ;
+                    } else {
+//                        if (temp > z_offset + y_offset + (z - 1) * sizeZ + j) {
+//                            printf("****\nblock_size %d\nbswithout_boundaries %d\n", block_size, block_size_without_boundaries);
+//                            printf("===\np %d\ny %d\nzo %d\nz %d\n", position, y_offset, z_offset, z);
+//                        }
+//                        printf("%d\n", temp = z_offset + y_offset + (z - 1) * sizeZ + j);
+                        vect[z_offset + y_offset + (z - 1) * sizeZ + j] = sendvect[position];
+                        ++j;
+                    }
                 }
             }
         }
+
+
+        printf("Finish\n");
     }
-
-
-//    for (int l = 0; l < sizeP; ++l) {
-//        for (int k = 0; k < proc_nZ; ++k) {
-//            for (int i = 0; i < block_size; ++i) {
-//                sendvect[l * proc_vect_size + k * block_size + i]
-//                        = vect[(l % lineSizeP) * lineSizeP * realSizeZ + k * realSizeZ + i];
 
 
     if (rankP == ROOT) {
@@ -303,12 +334,17 @@ int main(int argc, char** argv) {
         printf("Run time %.15lf\n", endTime - startTime);
 
 
+//        printf("GET!!!!\n");
+//        for (int i = 0; i < task.fullVectSize; ++i) {
+//            printf( "%2.15le\n", vect[i]);
+//        }
+
         // Output
-        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI2_full.txt", "w");
+        FILE *outfile = fopen(outfilename.c_str(), "w");
 //        FILE *outfile = fopen("../../result/Sergey/Sergey_Euler_MPI_full_test2.txt", "w");
 
         for (int i = 0; i < task.fullVectSize; ++i) {
-            if ( i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1)
+            if (i % (task.nX + 2) != 0 && i % (task.nY + 2) != task.nZ + 1)
                 fprintf(outfile, "%2.15le\n", vect[i]);
         }
 //        for (int i = 1; i <= task.nX; ++i) {
@@ -318,8 +354,3 @@ int main(int argc, char** argv) {
     }
     MPI_Finalize();
 }
-
-double getVectorValue(double *vect, int x, int y, int z, Task task) {
-    return vect[x + (task.nX + 2) * y + (task.nX+2)*task.nY*z];
-}
-
