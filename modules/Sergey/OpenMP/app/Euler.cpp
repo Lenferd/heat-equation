@@ -14,10 +14,12 @@ int main(int argc, char **argv) {
     int prevTime, currTime;
 
     // File variables
-    string functionFile = "../../../../../initial/function2.txt";
+//    string functionFile = "../../../../../initial/function2.txt";
+    string functionFile = "function2.txt";
 //    string functionFile = "../../../../../initial_for_tests/function5.txt";
 //    string functionFile = "../../initial_test/function.txt";
-    string settingFile = "../../../../../initial/setting2.ini";
+//    string settingFile = "../../../../../initial/setting2.ini";
+    string settingFile = "setting2.ini";
 //    string settingFile = "../../../../../initial_for_tests/setting5.ini";
 //    string settingFile = "../../initial_test/setting.ini";
 
@@ -70,8 +72,10 @@ int main(int argc, char **argv) {
 
 
     // Output
-    string outfilename = "../../../../../result/Sergey-N/Openmp_Euler_1.txt";
-//    string outfilename = "../../../../../result/Sergey/accurancy_test/h=10-5/Euler" + consoleInput + "_full.txt";
+//    string outfilename = "../../../../../result/Sergey-N/Openmp_Euler_1.txt";
+
+    string outfilename = "accurancy_test/stepX_" + std::to_string(task.stepX) + "_stepT_" +
+            std::to_string(task.dt)+ ".txt";
     FILE *outfile = fopen(outfilename.c_str(), "w");
 
     for (int i = 0; i < task.fullVectSize; ++i) {
