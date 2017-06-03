@@ -191,6 +191,9 @@ int main(int argc, char **argv) {
     double *left_vect = new double[send_vect_size];
     double *right_vect = new double[send_vect_size];
 
+    double *left_vect_get = new double[send_vect_size];
+    double *right_vect_get = new double[send_vect_size];
+
     for (double j = 0; j < task.tFinish; j += task.dt) {
 
         // Before each iteration - swap data
@@ -208,17 +211,17 @@ int main(int argc, char **argv) {
         int left_proc = (rankP / lineSizeP) * lineSizeP + (rankP - 1 + lineSizeP) % lineSizeP;
         int right_proc = (rankP / lineSizeP) * lineSizeP + (rankP + 1 + lineSizeP) % lineSizeP;
 
-        MPI_Sendrecv(left_vect, send_vect_size, MPI_DOUBLE, left_proc, 0,
-                     left_vect, send_vect_size, MPI_DOUBLE, right_proc, 0, MPI_COMM_WORLD, &status);
+        MPI_Sendrecv(left_vect, send_vect_size, MPI_DOUBLE, left_proc, 1,
+            left_vect_get, send_vect_size, MPI_DOUBLE, right_proc, 1, MPI_COMM_WORLD, &status);
 //
-        MPI_Sendrecv(right_vect, send_vect_size, MPI_DOUBLE, right_proc, 0,
-                     right_vect, send_vect_size, MPI_DOUBLE, left_proc, 0, MPI_COMM_WORLD, &status);
+        MPI_Sendrecv(right_vect, send_vect_size, MPI_DOUBLE, right_proc, 1,
+            right_vect_get, send_vect_size, MPI_DOUBLE, left_proc, 1, MPI_COMM_WORLD, &status);
 //
         for (int z = 0; z < proc_nZ; ++z) {
             for (int i = 0; i < proc_nX; ++i) {
-                proc_vect[currTime][z * proc_sizeZ + i] = left_vect[z * proc_nX + i];
+                proc_vect[currTime][z * proc_sizeZ + i] = left_vect_get[z * proc_nX + i];
                 proc_vect[currTime][z * proc_sizeZ + (proc_nY - 1) * proc_sizeY + i] =
-                        right_vect[z * proc_nX + i];
+                    right_vect_get[z * proc_nX + i];
             }
         }
 //
@@ -231,13 +234,13 @@ int main(int argc, char **argv) {
         // 1 and 2 iter - in one field in the memory
         send_vect_size = proc_nY * proc_nX;
         // top
-        MPI_Sendrecv(proc_vect[currTime] + proc_sizeZ, send_vect_size, MPI_DOUBLE, top_proc, 0,
-                     proc_vect[currTime], send_vect_size, MPI_DOUBLE, bottom_proc, 0, MPI_COMM_WORLD, &status);
+        MPI_Sendrecv(proc_vect[currTime] + proc_sizeZ, send_vect_size, MPI_DOUBLE, top_proc, 2,
+                     proc_vect[currTime], send_vect_size, MPI_DOUBLE, bottom_proc, 2, MPI_COMM_WORLD, &status);
 
         // bottom
         int offset = proc_vect_size - send_vect_size;
-        MPI_Sendrecv(proc_vect[currTime] + offset - proc_sizeZ, send_vect_size, MPI_DOUBLE, bottom_proc, 0,
-                     proc_vect[currTime] + offset, send_vect_size, MPI_DOUBLE, top_proc, 0, MPI_COMM_WORLD, &status);
+        MPI_Sendrecv(proc_vect[currTime] + offset - proc_sizeZ, send_vect_size, MPI_DOUBLE, bottom_proc, 2,
+                     proc_vect[currTime] + offset, send_vect_size, MPI_DOUBLE, top_proc, 2, MPI_COMM_WORLD, &status);
 
 //
         int boundaries_offset = proc_sizeY;
