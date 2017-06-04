@@ -74,8 +74,10 @@ int main(int argc, char **argv) {
     // Output
 //    string outfilename = "../../../../../result/Sergey-N/Openmp_Euler_1.txt";
 
-    string outfilename = "accurancy_test/stepX_" + std::to_string(task.stepX) + "_stepT_" +
-            std::to_string(task.dt)+ ".txt";
+    //string outfilename = "accurancy_test/stepX_" + std::to_string(task.stepX) + "_stepT_" +
+    //        std::to_string(task.dt)+ ".txt";
+    string outfilename = "accurancy_test/res.txt";
+
     FILE *outfile = fopen(outfilename.c_str(), "w");
 
     for (int i = 0; i < task.fullVectSize; ++i) {

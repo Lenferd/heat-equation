@@ -55,7 +55,7 @@ int initTaskUsingFile(Task &task, string settingFile) {
     return 0;
 }
 
-int setTimestep(Task &task){
+void setTimestep(Task &task){
     task.stepX = (fabs(task.xStart) + fabs(task.xEnd)) / task.nX;
 
     task.stepY = (fabs(task.xStart) + fabs(task.xEnd)) / task.nY;
