@@ -14,7 +14,7 @@ void spMatrixInit(SparseMatrix &sp, int size, int rows) {
 
 void multiplicateVector(SparseMatrix &sp, double *&vect, double *&result, int size) {
 
-    omp_set_num_threads(1);
+    //omp_set_num_threads(4);
 
     #pragma omp parallel for if (ENABLE_PARALLEL)
     for (int i = 0; i < size; i++) {
