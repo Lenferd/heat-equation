@@ -2,3 +2,5 @@
 build/
 .idea/
 initial_test
+build_debug
+build_release
