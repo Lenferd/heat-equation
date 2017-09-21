@@ -1,5 +1,5 @@
 #!/bin/bash 
-PATH_PROGRAM=$(find ../../build -name 'app_Sergey_OpenMP_Euler')
+PATH_PROGRAM=$(find ../../build -name 'app_Sergey_OpenMP_Euler.exe')
 echo "$PATH_PROGRAM"
 cp -f "$PATH_PROGRAM" .
 
@@ -11,7 +11,7 @@ do
 	sed -i 's/NX=.*/NX='"$h"'/g' setting2.ini
 	sed -i 's/NY=.*/NY='"$h"'/g' setting2.ini
 	sed -i 's/NZ=.*/NZ='"$h"'/g' setting2.ini
-	python3 generation2.py
+	python generation2.py
 
 	for (( dt = 3; dt <= 4; dt++ ))
 	do
@@ -20,6 +20,7 @@ do
 		echo "-------"
 		sed -i 's/dt=.*/dt=1e-'"$dt"'/g' setting2.ini
 		./app_Sergey_OpenMP_Euler
+		python fault.py expected2.txt accurancy_test/res.txt >> faults_euler.txt
 	done
 done
-rm res.txt
+rm accurancy_test/res.txt

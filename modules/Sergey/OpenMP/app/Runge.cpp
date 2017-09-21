@@ -4,7 +4,7 @@
 
 #include <iostream>
 #include <omp.h>
-#include "Task.h"
+#include "Task_old.h"
 #include "SparseMatrix.h"
 
 using std::string;
@@ -16,9 +16,17 @@ int main(int argc, char** argv) {
     double time_S, time_E;
     int prevTime, currTime;
 
-    // File variables
-    string functionFile = "../../initial/function.txt";
-    string settingFile = "../../initial/setting.ini";
+    int threads;
+
+    if (argc != 5) {
+        printf("input data error!\n Format: setting.txt function.txt out.txt");
+        exit(0);
+    }
+
+    string settingFile = argv[1];
+    string functionFile = argv[2];
+    string outfilename = argv[3];
+    threads = atoi(argv[4]);
 
     // Read task settings
     Task task;
@@ -40,6 +48,8 @@ int main(int argc, char** argv) {
     prevTime = 0;
     currTime = 1;
 
+    boundaries_matrix_fix(vect[prevTime], task.nX, task.nY, task.nZ);
+
     /***
      * K1 Vector
      */
@@ -50,15 +60,21 @@ int main(int argc, char** argv) {
     matrixValueK1.z1 = (task.sigma) / (task.stepZ * task.stepZ);
     matrixValueK1.x2Comp = (- 2 * matrixValueK1.x1 - 2 * matrixValueK1.y1 - 2 * matrixValueK1.z1);
 
+//    printf("\nk1\n");
+//    printf("x1 %lf\t", matrixValueK1.x1);
+//    printf("y1 %lf\t", matrixValueK1.y1);
+//    printf("z1 %lf\t", matrixValueK1.z1);
+//    printf("x2C %lf\t", matrixValueK1.x2Comp);
+
     // init and fill sparseMatrix
     SparseMatrix spMatK1;
     int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
 
-    spMatrixInit(spMatK1, sparseMatrixSize, task.fullVectSize);
+    spMatrixInit(spMatK1, sparseMatrixSize, task.fullVectSize, threads);
     fillMatrix3d6Expr(spMatK1, matrixValueK1, task.nX, task.nY, task.nZ);
 
     /***
-    * K2-3 Vector
+    * K2
     */
     // value for the matrix
     MatrixValue matrixValueK2;
@@ -67,12 +83,40 @@ int main(int argc, char** argv) {
     matrixValueK2.z1 = (task.sigma * task.dt * 0.5) / (task.stepZ * task.stepZ);
     matrixValueK2.x2Comp = (1 - 2 * matrixValueK2.x1 - 2 * matrixValueK2.y1 - 2 * matrixValueK2.z1);
 
+//    printf("\nk2\n");
+//    printf("x1 %lf\t", matrixValueK2.x1);
+//    printf("y1 %lf\t", matrixValueK2.y1);
+//    printf("z1 %lf\t", matrixValueK2.z1);
+//    printf("x2C %lf\t", matrixValueK2.x2Comp);
     // init and fill sparseMatrix
     SparseMatrix spMatK2;
     sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
 
-    spMatrixInit(spMatK2, sparseMatrixSize, task.fullVectSize);
+    spMatrixInit(spMatK2, sparseMatrixSize, task.fullVectSize, threads);
     fillMatrix3d6Expr(spMatK2, matrixValueK2, task.nX, task.nY, task.nZ);
+
+
+    /***
+    * K3
+    */
+    // value for the matrix
+    MatrixValue matrixValueK3;
+    matrixValueK3.x1 = (task.sigma * task.dt * 0.5) / (task.stepX * task.stepX);
+    matrixValueK3.y1 = (task.sigma * task.dt * 0.5) / (task.stepY * task.stepY);
+    matrixValueK3.z1 = (task.sigma * task.dt * 0.5) / (task.stepZ * task.stepZ);
+    matrixValueK3.x2Comp = (-2 * matrixValueK3.x1 - 2 * matrixValueK3.y1 - 2 * matrixValueK3.z1);
+
+//    printf("\nk3\n");
+//    printf("x1 %lf\t", matrixValueK3.x1);
+//    printf("y1 %lf\t", matrixValueK3.y1);
+//    printf("z1 %lf\t", matrixValueK3.z1);
+//    printf("x2C %lf\t", matrixValueK3.x2Comp);
+    // init and fill sparseMatrix
+    SparseMatrix spMatK3;
+    sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+
+    spMatrixInit(spMatK3, sparseMatrixSize, task.fullVectSize, threads);
+    fillMatrix3d6Expr(spMatK3, matrixValueK3, task.nX, task.nY, task.nZ);
 
     /***
     * K4 Vector
@@ -82,17 +126,20 @@ int main(int argc, char** argv) {
     matrixValueK4.x1 = (task.sigma * task.dt) / (task.stepX * task.stepX);
     matrixValueK4.y1 = (task.sigma * task.dt) / (task.stepY * task.stepY);
     matrixValueK4.z1 = (task.sigma * task.dt) / (task.stepZ * task.stepZ);
-    matrixValueK4.x2Comp = (1 - 2 * matrixValueK4.x1 - 2 * matrixValueK4.y1 - 2 * matrixValueK4.z1);
+    matrixValueK4.x2Comp = (- 2 * matrixValueK4.x1 - 2 * matrixValueK4.y1 - 2 * matrixValueK4.z1);
+
+//    printf("\nk4\n");
+//    printf("x1 %lf\t", matrixValueK4.x1);
+//    printf("y1 %lf\t", matrixValueK4.y1);
+//    printf("z1 %lf\t", matrixValueK4.z1);
+//    printf("x2C %lf\t", matrixValueK4.x2Comp);
 
     // init and fill sparseMatrix
     SparseMatrix spMatK4;
     sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
 
-    spMatrixInit(spMatK4, sparseMatrixSize, task.fullVectSize);
+    spMatrixInit(spMatK4, sparseMatrixSize, task.fullVectSize, threads);
     fillMatrix3d6Expr(spMatK4, matrixValueK4, task.nX, task.nY, task.nZ);
-
-
-
 
     // Calculating
     time_S = omp_get_wtime();
@@ -100,28 +147,35 @@ int main(int argc, char** argv) {
     for (double j = 0; j < task.tFinish; j += task.dt) {
         multiplicateVector(spMatK1, vect[prevTime], vectK1, task.fullVectSize);
         multiplicateVector(spMatK2, vectK1, vectK2, task.fullVectSize);
-        multiplicateVector(spMatK2, vectK2, vectK3, task.fullVectSize); // Sparse matrix for k3 equal k2
-        multiplicateVector(spMatK4, vectK3, vectK4, task.fullVectSize);
+        multiplicateVectorRunge(spMatK3, vectK2, vectK1, vectK3, task.fullVectSize);
+        multiplicateVectorRunge(spMatK4, vectK3, vectK1, vectK4, task.fullVectSize);
 
+        #pragma omp parallel for
         for (int i = 0; i < task.fullVectSize; ++i) {
-            vect[currTime][i] =
-                    vect[prevTime][i] + task.dt / 6 * (vectK1[i] + 2 * vectK2[i] + 2 * vectK3[i] + vectK4[i]);
+//            if (i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1) {
+                vect[currTime][i] =
+                        vect[prevTime][i] + task.dt / 6 * (vectK1[i] + 2 * vectK2[i] + 2 * vectK3[i] + vectK4[i]);
+//            } else if (i % (task.nX)){
+//                vect[currTime][i] = vect[prevTime][i];
+//            }
         }
+
+//        boundaries_matrix_fix(vect[currTime], vect[prevTime], task.nX, task.nY, task.nZ);
 
         prevTime = (prevTime + 1) % 2;
         currTime = (currTime + 1) % 2;
     }
     time_E = omp_get_wtime();
     printf("Run time %.15lf\n", time_E-time_S);
-
+    printf("On %d threads\n", threads);
 
     // Output
-    FILE *outfile = fopen("../../result/Sergey/Sergey_Runge.txt", "w");
+    FILE *outfile = fopen(outfilename.c_str(), "w");
 
-    double outData;
-    for (int i = 1; i <= task.nX; ++i) {
-        fprintf(outfile, "%2.15le\n", getVectorValue(vect[0],i,0,0,task));
-
+//    double outData;
+    for (int i = 0; i < task.fullVectSize; ++i) {
+        if (i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1)
+            fprintf(outfile, "%2.15le\n", vect[0][i]);
     }
 }
 

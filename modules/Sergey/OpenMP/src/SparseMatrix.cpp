@@ -4,27 +4,76 @@
 
 #include "SparseMatrix.h"
 
-void spMatrixInit(SparseMatrix &sp, int size, int rows) {
+void spMatrixInit(SparseMatrix &sp, int size, int rows, int threads) {
     sp._size = size;
     sp._rows = rows;
     sp.values = new double[size];
     sp.columns = new int[size];
-    sp.pointerB = new int[rows+1];
+    sp.pointerB = new int[rows + 1];
+    sp.threads = threads;
 }
 
 void multiplicateVector(SparseMatrix &sp, double *&vect, double *&result, int size) {
 
-    omp_set_num_threads(4);
+    omp_set_num_threads(sp.threads);
 
-    #pragma omp parallel for if (ENABLE_PARALLEL)
-    for (int i = 0; i < size; i++){  // iteration FOR RESULT VECTOR!!!
+#pragma omp parallel for
+    for (int i = 0; i < size; i++) {  // iteration FOR RESULT VECTOR!!!
         double local_result = 0;
-        for (int j = sp.pointerB[i]; j < sp.pointerB[i+1]; j++) {
+        for (int j = sp.pointerB[i]; j < sp.pointerB[i + 1]; j++) {
             local_result += sp.values[j] * vect[sp.columns[j]];
         }
         result[i] = local_result;
     }
 }
+
+void multiplicateVectorAVXLine(SparseMatrix &sp, double *&vect, double *&result, int size) {
+    int first_point_b;
+    double *temp_vect = new double[8];
+    double *result_vect = new double[4];
+    for (int i = 0; i < size; i++) {  // iteration FOR RESULT VECTOR!!!
+        first_point_b = sp.pointerB[i];
+
+        __m256d first_values = _mm256_loadu_pd(sp.values + first_point_b);
+        __m256d second_values = _mm256_loadu_pd(sp.values + first_point_b + 4);
+
+        temp_vect[0] = vect[sp.columns[first_point_b]];
+        temp_vect[1] = vect[sp.columns[first_point_b + 1]];
+        temp_vect[2] = vect[sp.columns[first_point_b + 2]];
+        temp_vect[3] = vect[sp.columns[first_point_b + 3]];
+
+        temp_vect[4] = vect[sp.columns[first_point_b + 4]];
+        temp_vect[5] = vect[sp.columns[first_point_b + 5]];
+        temp_vect[6] = vect[sp.columns[first_point_b + 6]];
+        temp_vect[7] = 0;
+
+        __m256d first_vect = _mm256_loadu_pd(temp_vect);
+        __m256d second_vect = _mm256_loadu_pd(temp_vect + 4);
+
+        __m256d first_result = _mm256_mul_pd(first_values, first_vect);
+        __m256d second_result = _mm256_mul_pd(second_values, second_vect);
+        __m256d third_result = _mm256_add_pd(first_result, second_result);
+
+        result_vect = (double *) &third_result;
+        result[i] = result_vect[0] + result_vect[1] + result_vect[2] + result_vect[3];
+
+    }
+}
+
+void multiplicateVectorRunge(SparseMatrix &sp, double *&vect, double *&additional_vect, double *&result, int size) {
+
+    omp_set_num_threads(sp.threads);
+
+#pragma omp parallel for
+    for (int i = 0; i < size; i++) {  // iteration FOR RESULT VECTOR!!!
+        double local_result = 0;
+        for (int j = sp.pointerB[i]; j < sp.pointerB[i + 1]; j++) {
+            local_result += sp.values[j] * vect[sp.columns[j]];
+        }
+        result[i] = local_result + additional_vect[i];
+    }
+}
+
 
 void fillMatrix2Expr(SparseMatrix &sp, int size, double expr1, double expr2) {
     int index = 0;
@@ -69,7 +118,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
 
     int sectionStart = 0;
     for (int z = 0; z < sizeZ; ++z) {
-        for (int y = 0; y < sizeY ; ++y) {
+        for (int y = 0; y < sizeY; ++y) {
             sectionStart = z * realSizeZ + y * realSizeY;
 
             /** Boundaries rule
@@ -83,7 +132,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
             int fixBounds = 0;
 
             for (int x = 0; x < realSizeX; ++x) {
-                if (x == 0 ) {
+                if (x == 0) {
                     fixBounds = 1;
                 } else if ((x + 1) == realSizeX) {
                     fixBounds = -1;
@@ -119,7 +168,7 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
 
                 // Y second
                 sp.values[index] = taskexpr.y1;
-                sp.columns[index] = y == sizeY - 1?
+                sp.columns[index] = y == sizeY - 1 ?
                                     fixBounds + x + sectionStart - realSizeY * (sizeY - 1) :
                                     fixBounds + x + sectionStart + realSizeY;
                 ++index;
@@ -139,7 +188,6 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
 
     sp.pointerB[pIndex] = index + 1;   //end
 }
-
 
 //void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ) {
 //    int realSizeX = sizeX + 2;
@@ -228,6 +276,31 @@ void printVectors(SparseMatrix &sp) {
         printf("%lf ", sp.values[i]);
     }
     printf("\n");
+
+}
+
+void boundaries_matrix_fix(double *&vect, int sizeX, int sizeY, int sizeZ) {
+    int realSizeX = sizeX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * sizeY;
+
+
+    int sectionStart = 0;
+#pragma omp parallel for
+    for (int z = 0; z < sizeZ; ++z) {
+        for (int y = 0; y < sizeY; ++y) {
+            sectionStart = z * realSizeZ + y * realSizeY;
+
+            for (int x = 0; x < realSizeX; ++x) {
+                if (x == 0) {
+                    vect[sectionStart + x] = vect[sectionStart + x + 1];
+                } else if ((x + 1) == realSizeX) {
+                    vect[sectionStart + x] = vect[sectionStart + x - 1];
+                } else { ;
+                }
+            }
+        }
+    }
 
 }
 

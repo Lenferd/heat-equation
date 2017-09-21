@@ -237,10 +237,10 @@ int main(int argc, char **argv) {
         int right_proc = (rankP / lineP) * lineP + (rankP + 1 + lineP) % lineP;
 
         MPI_Sendrecv(left_vect, send_vect_size_lr, MPI_DOUBLE, left_proc, 1,
-                     left_vect_get, send_vect_size_lr, MPI_DOUBLE, right_proc, 1, MPI_COMM_WORLD, &status);
+                     right_vect_get, send_vect_size_lr, MPI_DOUBLE, right_proc, 1, MPI_COMM_WORLD, &status);
 
         MPI_Sendrecv(right_vect, send_vect_size_lr, MPI_DOUBLE, right_proc, 2,
-                     right_vect_get, send_vect_size_lr, MPI_DOUBLE, left_proc, 2, MPI_COMM_WORLD, &status);
+                     left_vect_get, send_vect_size_lr, MPI_DOUBLE, left_proc, 2, MPI_COMM_WORLD, &status);
 
         for (int z = 0; z < proc.nZ; ++z) {
             for (int i = 0; i < proc.nX; ++i) {

@@ -2,7 +2,7 @@
 set(target "${APP}_Euler")
 
 file(GLOB src_euler Euler.cpp)
-
+add_definitions(-mavx -o2)
 add_executable(${target} ${src_euler})
 target_link_libraries(${target} ${LIBRARY})
 
