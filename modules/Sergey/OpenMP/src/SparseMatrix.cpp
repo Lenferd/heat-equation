@@ -545,6 +545,67 @@ void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, in
     sp.pointerB[pIndex] = index + 1;   //end
 }
 
+void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ) {
+    int realSizeX = sizeX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * sizeY;
+
+    int fixedSizeX = sizeX + 2;
+    int fixedSizeY = sizeY + 2;
+    int fixedSizeZ = sizeZ + 2;
+
+    int index = 0;
+    int pIndex = 0;
+
+
+    int sectionStart = 0;
+    for (int z = 1; z < fixedSizeZ - 1; ++z) {
+        for (int y = 1; y < fixedSizeY - 1; ++y) {
+            sectionStart = z * realSizeZ + y * realSizeY;
+
+            for (int x = 1; x < fixedSizeX - 1; ++x) {
+                // Z first
+                sp.values[index] = taskexpr.z1;
+                sp.columns[index] = x + sectionStart - realSizeZ;
+                sp.pointerB[pIndex++] = index;
+                ++index;
+
+
+                // Y first
+                sp.values[index] = taskexpr.y1;
+                sp.columns[index] = x + sectionStart - realSizeY;
+                ++index;
+
+                // X Group center
+                sp.values[index] = taskexpr.x1;
+                sp.columns[index] = sectionStart + x - 1;
+                ++index;
+
+                sp.values[index] = taskexpr.x2Comp;
+                sp.columns[index] = sectionStart + x;
+                ++index;
+
+                sp.values[index] = taskexpr.x1;
+                sp.columns[index] = sectionStart + x + 1;
+                ++index;
+
+                // Y second
+                sp.values[index] = taskexpr.y1;
+                sp.columns[index] = x + sectionStart + realSizeY;
+                ++index;
+
+                // Z second
+                sp.values[index] = taskexpr.z1;
+                sp.columns[index] = x + sectionStart + realSizeZ;
+                ++index;
+
+            }
+        }
+    }
+
+    sp.pointerB[pIndex] = index + 1;   //end
+}
+
 void printVectors(SparseMatrix &sp) {
     printf("values\n");
     for (int i = 0; i < sp._size; ++i) {
@@ -579,3 +640,47 @@ void boundaries_matrix_fix(double *&vect, int sizeX, int sizeY, int sizeZ) {
 
 }
 
+void boundaries_matrix_fix_for_xyz(double *&vect, int sizeX, int sizeY, int sizeZ) {
+    int realSizeX = sizeX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * (sizeY + 2);
+
+    int fixedSizeX = sizeX + 2;
+    int fixedSizeY = sizeY + 2;
+    int fixedSizeZ = sizeZ + 2;
+
+    int sectionStart;
+    int sectionEnd;
+
+    // z == 0 && z == sizeZ - 1
+    for (int y = 0; y < fixedSizeY; ++y) {
+        sectionStart = y * realSizeY;
+        sectionEnd = (fixedSizeZ - 1) * realSizeZ;
+        for (int x = 0; x < realSizeX; ++x) {
+            vect[sectionStart + x] = vect[sectionEnd - realSizeZ + x + 1];
+            vect[sectionEnd + x] = vect[sectionStart + realSizeZ + x + 1];
+        }
+    }
+
+    // y == 0 && y == sizeY - 1
+    for (int z = 1; z < fixedSizeZ - 1; ++z) {
+        sectionStart = z * realSizeZ;
+        sectionEnd = (fixedSizeY - 1) * realSizeY + z * realSizeZ;
+        for (int x = 0; x < realSizeX; ++x) {
+            vect[sectionStart + x] = vect[sectionEnd - realSizeY + x + 1];
+            vect[sectionEnd + x] = vect[sectionStart + realSizeY + x + 1];
+        }
+    }
+
+    // x == 0 && x == sizeX -1
+    for (int p = 0; p < realSizeZ * fixedSizeZ; p+=fixedSizeY) {
+        vect[p] = vect[p+1];
+        vect[p + fixedSizeY - 1] = vect[p + fixedSizeY - 2];
+    }
+
+//    for (int p = 0; p < size; p+=proc.sizeY) {
+//        proc_vect[p] = proc_vect[p+1];
+//        proc_vect[p + proc.sizeY - 1] = proc_vect[p + proc.sizeY - 2];
+//    }
+
+}

@@ -29,8 +29,10 @@ void fillMatrix2Expr(SparseMatrix &sp, int size, double expr1, double expr2);
 
 void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ);
 void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ);
+void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ);
 
 void boundaries_matrix_fix(double *&vect, int sizeX, int sizeY, int sizeZ);
+void boundaries_matrix_fix_for_xyz(double *&vect, int sizeX, int sizeY, int sizeZ);
 
 void multiplicateVectorAVXLine(SparseMatrix &sp, double *&vect, double *&result, int size);
 void multiplicateVectorAVXColumn(SparseMatrix &sp, double *&vect, double *&result, int size);
