@@ -34,5 +34,6 @@ struct Task {
 
 int initTaskUsingFile(Task &task, string settingFile);
 int initMemoryReadData(double **& vect, string file, Task &task);
+int initMemoryReadData_for_additional_xyz(double **& vect, string file, Task &task);
 void setTimestep(Task &task);
 #endif //HEAT_EQUATION_TASK_H

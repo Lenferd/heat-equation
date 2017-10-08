@@ -95,3 +95,31 @@ int initMemoryReadData(double **& vect, string file, Task &task) {
     }
     return 0;
 }
+
+
+int initMemoryReadData_for_additional_xyz(double **& vect, string file, Task &task) {
+    FILE *inFunctionfile = fopen(file.c_str(), "r");
+
+    vect = new double*[2];
+    task.fullVectSize = (task.nX + 2) * (task.nY + 2) * (task.nZ + 2);
+    vect[0] = new double[task.fullVectSize];
+    vect[1] = new double[task.fullVectSize];
+
+    int scan_value = 0;
+    /// Read file
+    for (int z = 1; z < task.nZ - 1; z++) {
+        for (int y = 1; y < task.nY - 1; ++y) {
+            for (int i = 1; i < task.nX + 1; ++i) {
+                scan_value += fscanf(inFunctionfile, "%lf\n",
+                                     &vect[0][i + (task.nX + 2) * y + (task.nX + 2) * (task.nY + 2) * z]);
+            }
+        }
+    }
+
+    fclose(inFunctionfile);
+    if (scan_value != task.nX * task.nY * task.nZ) {
+        printf("Data reading error\n");
+        exit(-3);
+    }
+    return 0;
+}
