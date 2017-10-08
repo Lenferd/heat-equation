@@ -3,6 +3,8 @@
 //
 
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include "Task.h"
 
 using std::string;
@@ -11,7 +13,7 @@ int initTaskUsingFile(Task &task, string settingFile) {
     FILE *inSettingfile = fopen(settingFile.c_str(), "r");
     if (inSettingfile == NULL) {
         printf("File reading error. Try to relocate input file\n");
-        exit(0);
+        exit(-1);
     }
 
 //    XSTART=-1.0
@@ -100,16 +102,18 @@ int initMemoryReadDataMPI(double *& vect, string file, Task &task) {
     task.fullVectSize = (task.nX + 2) * (task.nY) * (task.nZ);
     vect = new double[task.fullVectSize];
 
+    int error;
     /// Read file
     for (int k = 0; k < task.nZ; k++) {
         for (int j = 0; j < task.nY; ++j) {
             for (int i = 1; i < task.nX + 1; ++i) {
-                fscanf(inFunctionfile, "%lf\n", &vect[i + (task.nX + 2) * j + (task.nX+2) * task.nY * k]);
+                error += fscanf(inFunctionfile, "%lf\n", &vect[i + (task.nX + 2) * j + (task.nX+2) * task.nY * k]);
             }
         }
     }
 
     fclose(inFunctionfile);
+
     return 0;
 }
 

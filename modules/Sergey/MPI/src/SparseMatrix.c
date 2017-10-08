@@ -105,7 +105,7 @@ int fillMatrix_3d_MPI_woBound(SparseMatrix *sp, MatrixVal *m_value, ProcSettings
 void multiplicateMatrVector(SparseMatrix *sp, double *input, double *result, int size){
 //    omp_set_num_threads(sp->threads);
 
-    #pragma omp parallel for
+//    #pragma omp parallel for
     for (int i = 0; i < size; i++){  // iteration FOR RESULT VECTOR!!!
         double local_result = 0;
         for (int j = sp->pointerB[i]; j < sp->pointerB[i+1]; j++) {

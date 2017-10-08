@@ -5,7 +5,7 @@
 #include <iostream>
 #include <omp.h>
 #include <cmath>
-#include "Task_old.h"
+#include "Task.h"
 #include "SparseMatrix.h"
 
 using std::string;
