@@ -66,26 +66,20 @@ int main(int argc, char **argv) {
     int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
 
     spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize, threads);
-    fillMatrix3d6Expr(spMat, matrixValue, task.nX, task.nY, task.nZ);
+    fillMatrix3d6Expr_wo_boundaries(spMat, matrixValue, task.nX, task.nY, task.nZ);
 
     // Calculating
     time_S = omp_get_wtime();
 
     for (double j = 0; j < task.tFinish; j += task.dt) {
         multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+        boundaries_matrix_fix(vect[currTime], task.nX, task.nY, task.nZ);
         prevTime = (prevTime + 1) % 2;
         currTime = (currTime + 1) % 2;
     }
     time_E = omp_get_wtime();
     printf("Run time %.15lf\n", time_E - time_S);
     printf("On %d threads\n", threads);
-
-    // Output
-//    string outfilename = "../../../../../result/Sergey-N/Openmp_Euler_1.txt";
-
-    //string outfilename = "accurancy_test/stepX_" + std::to_string(task.stepX) + "_stepT_" +
-    //        std::to_string(task.dt)+ ".txt";
-    //string outfilename = "accurancy_test/res.txt";
 
     FILE *outfile = fopen(outfilename.c_str(), "w");
 

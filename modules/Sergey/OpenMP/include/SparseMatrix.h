@@ -36,6 +36,7 @@ void multiplicateVectorAVXLine(SparseMatrix &sp, double *&vect, double *&result,
 void multiplicateVectorAVXColumn(SparseMatrix &sp, double *&vect, double *&result, int size);
 void multiplicateVectorAVXColumn2(SparseMatrix &sp, double *&vect, double *&result, int size);
 void multiplicateVectorAVXColumn3(SparseMatrix &sp, double *&vect, double *&result, int size);
+void multiplicateVectorAVXColumn4(SparseMatrix &sp, double *&vect, double *&result, int size, int sizeX, int sizeY, int sizeZ);
 
 void multiplicateVectorAVXBlocks(SparseMatrix &sp, double *&vect, double *&result, int size);
 

@@ -6,6 +6,8 @@
 #define HEAT_EQUATION_TASK_H
 
 #include <iostream>
+#include <cstdio>
+#include <cstdlib>
 using std::string;
 
 struct Task {

@@ -128,7 +128,7 @@ void multiplicateVectorAVXColumn(SparseMatrix &sp, double *&vect, double *&resul
         __m256d result7 = _mm256_mul_pd(z1s, z1sval);
         __m256d res_sum6 = _mm256_add_pd(res_sum5, result7);
 
-        _mm256_storeu_pd(vect + i, res_sum6);
+        _mm256_storeu_pd(result + i, res_sum6);
         // 7.9 vs 5.3, but abs 0.56 and rel 1535.
     }
 }
@@ -186,7 +186,7 @@ void multiplicateVectorAVXColumn2(SparseMatrix &sp, double *&vect, double *&resu
         result_mul1 = _mm256_mul_pd(z1s, z1sval);
         res_sum2 = _mm256_add_pd(result_mul1, res_sum1);
 
-        _mm256_storeu_pd(vect + i, res_sum2);
+        _mm256_storeu_pd(result + i, res_sum2);
     }
 }
 
@@ -243,9 +243,114 @@ void multiplicateVectorAVXColumn3(SparseMatrix &sp, double *&vect, double *&resu
         result_mul1 = _mm256_mul_pd(v_vect, v_sp);
         res_sum2 = _mm256_add_pd(result_mul1, res_sum1);
 
-        _mm256_storeu_pd(vect + i, res_sum2);
+        _mm256_storeu_pd(result + i, res_sum2);
     }
 }
+
+void multiplicateVectorPart(SparseMatrix &sp, double *&vect, double *&result, int start, int size) {
+
+    omp_set_num_threads(sp.threads);
+
+    #pragma omp parallel for
+    for (int i = start; i < start + size; i++) {  // iteration FOR RESULT VECTOR!!!
+        double local_result = 0;
+        for (int j = sp.pointerB[i]; j < sp.pointerB[i + 1]; j++) {
+            local_result += sp.values[j] * vect[sp.columns[j]];
+        }
+        result[i] = local_result;
+    }
+}
+
+
+void multiplicateVectorAVXColumn4(SparseMatrix &sp, double *&vect, double *&result, int size, int sizeX, int sizeY,
+                                  int sizeZ) {
+    int realSizeX = sizeX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * sizeY;
+
+    int *point_b = new int[4];
+    int point_b_first;
+
+    double *first_values;
+    double *second_values;
+    double *third_values;
+    double *fourth_values;
+
+    multiplicateVectorPart(sp, vect, result, 0, realSizeZ); // z == 0
+    for (int z = 1; z < sizeY - 1; ++z) {
+        multiplicateVectorPart(sp, vect, result, z * realSizeZ, realSizeY); // y == 0
+        for (int y = 1; y < sizeY - 1; ++y) {
+            multiplicateVectorPart(sp, vect, result, z * realSizeZ + y * realSizeY, realSizeX); // x == 0
+            for (int x = 1; x < realSizeX - 1; x += 4) {
+                int sectionStart = z * realSizeZ + y * realSizeY;
+                if (x + 4 >= realSizeX - 1) {
+                    multiplicateVectorPart(sp, vect, result, sectionStart + x, realSizeX - x); // x == 0
+                }
+                point_b = (sp.pointerB + x);
+                point_b_first = *point_b;
+
+                // first, get vect values
+                __m256d z1f = _mm256_loadu_pd(vect + sp.columns[point_b_first]);
+                __m256d y1f = _mm256_loadu_pd(vect + sp.columns[point_b_first + 1]);
+
+                __m256d x1f = _mm256_loadu_pd(vect + sp.columns[point_b_first + 2]);
+                __m256d x2Comp = _mm256_loadu_pd(vect + sp.columns[point_b_first + 3]);
+                __m256d x1s = _mm256_loadu_pd(vect + sp.columns[point_b_first + 4]);
+
+                __m256d y1s = _mm256_loadu_pd(vect + sp.columns[point_b_first + 5]);
+                __m256d z1s = _mm256_loadu_pd(vect + sp.columns[point_b_first + 6]);
+
+
+                // 8 __m256d
+
+                // second, get sp.values
+                first_values = (sp.values + point_b_first);
+                second_values = (sp.values + point_b_first + 7);
+                third_values = (sp.values + point_b_first + 14);
+                fourth_values = (sp.values + point_b_first + 21);
+
+                // and fit it to __m256d
+                __m256d z1fval = _mm256_set_pd(first_values[0], second_values[0], third_values[0], fourth_values[0]);
+                __m256d y1fval = _mm256_set_pd(first_values[1], second_values[1], third_values[1], fourth_values[1]);
+
+                __m256d x1fval = _mm256_set_pd(first_values[2], second_values[2], third_values[2], fourth_values[2]);
+                __m256d x2Compval = _mm256_set_pd(first_values[3], second_values[3], third_values[3], fourth_values[3]);
+                __m256d x1sval = _mm256_set_pd(first_values[4], second_values[4], third_values[4], fourth_values[4]);
+
+                __m256d y1sval = _mm256_set_pd(first_values[5], second_values[5], third_values[5], fourth_values[5]);
+                __m256d z1sval = _mm256_set_pd(first_values[6], second_values[6], third_values[6], fourth_values[6]);
+
+                // 7 __m256d
+
+                __m256d result1 = _mm256_mul_pd(z1f, z1fval);
+                __m256d result2 = _mm256_mul_pd(y1f, y1fval);
+                __m256d res_sum1 = _mm256_add_pd(result1, result2);
+
+                result1 = _mm256_mul_pd(x1f, x1fval);
+                __m256d res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+                result1 = _mm256_mul_pd(x2Comp, x2Compval);
+                res_sum1 = _mm256_add_pd(res_sum2, result1);
+
+                result1 = _mm256_mul_pd(x1s, x1sval);
+                res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+                result1 = _mm256_mul_pd(y1s, y1sval);
+                res_sum1 = _mm256_add_pd(res_sum2, result1);
+
+                result1 = _mm256_mul_pd(z1s, z1sval);
+                res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+                _mm256_storeu_pd(result + x, res_sum2);
+                // 7.9 vs 5.3, but abs 0.56 and rel 1535.
+            }
+            multiplicateVectorPart(sp, vect, result, (z * realSizeZ) + ((y+1) * realSizeY) - realSizeX, realSizeX); // x == sizeX - 1
+        }
+        multiplicateVectorPart(sp, vect, result, ((z + 1) * realSizeZ) - realSizeY, realSizeY); // y == sizeY - 1
+    }
+    multiplicateVectorPart(sp, vect, result, size - realSizeZ, realSizeZ); // z == sizeZ -1
+}
+
 
 void multiplicateVectorRunge(SparseMatrix &sp, double *&vect, double *&additional_vect, double *&result, int size) {
 
@@ -376,86 +481,69 @@ void fillMatrix3d6Expr(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int s
     sp.pointerB[pIndex] = index + 1;   //end
 }
 
-//void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ) {
-//    int realSizeX = sizeX + 2;
-//    int realSizeY = realSizeX;
-//    int realSizeZ = realSizeY * sizeY;
-//    int index = 0;
-//    int pIndex = 0;
-//
-//
-//    int sectionStart = 0;
-//    for (int z = 0; z < sizeZ; ++z) {
-//        for (int y = 0; y < sizeY ; ++y) {
-//            sectionStart = z * realSizeZ + y * realSizeY;
-//
-//            /** Boundaries rule
-//             *  If we on the edge, we should use same expression (line with parametrs), as the line after.
-//             *  If it's first line the pattern for her is line two. (+1)
-//             *  If it's last line, pattern - previous line.         (-1)
-//             *  Realization - fixes value, whose start to work, if we on the boundaries, joins @var x
-//             *  @var fixBounds
-//             */
-//
-//            int fixBounds = 0;
-//
-//            for (int x = 0; x < realSizeX; ++x) {
-//                if (x == 0 ) {
-//                    fixBounds = 1;
-//                } else if ((x + 1) == realSizeX) {
-//                    fixBounds = -1;
-//                }
-//                // Z first
-//                sp.values[index] = taskexpr.z1;
-//                sp.columns[index] = z == 0 ?
-//                                    fixBounds + x + sectionStart + realSizeZ * (sizeZ - 1) :
-//                                    fixBounds + x + sectionStart - realSizeZ;
-//                sp.pointerB[pIndex++] = index;
-//                ++index;
-//
-//
-//                // Y first
-//                sp.values[index] = taskexpr.y1;
-//                sp.columns[index] = y == 0 ?
-//                                    fixBounds + x + sectionStart + realSizeY * (sizeY - 1) :
-//                                    fixBounds + x + sectionStart - realSizeY;
-//                ++index;
-//
-//                // X Group center
-//                sp.values[index] = taskexpr.x1;
-//                sp.columns[index] = fixBounds + x - 1;
-//                ++index;
-//
-//                sp.values[index] = taskexpr.x2Comp;
-//                sp.columns[index] = fixBounds + x;
-//                ++index;
-//
-//                sp.values[index] = taskexpr.x1;
-//                sp.columns[index] = fixBounds + x + 1;
-//                ++index;
-//
-//                // Y second
-//                sp.values[index] = taskexpr.y1;
-//                sp.columns[index] = y == sizeY - 1?
-//                                    fixBounds + x + sectionStart - realSizeY * (sizeY - 1) :
-//                                    fixBounds + x + sectionStart + realSizeY;
-//                ++index;
-//
-//                // Z second
-//                sp.values[index] = taskexpr.z1;
-//                sp.columns[index] = z == sizeZ - 1 ?
-//                                    fixBounds + x + sectionStart - realSizeZ * (sizeZ - 1) :
-//                                    fixBounds + x + sectionStart + realSizeZ;
-//                ++index;
-//
-//                // afterloop bound fix value clearing
-//                fixBounds = 0;
-//            }
-//        }
-//    }
-//
-//    sp.pointerB[pIndex] = index + 1;   //end
-//}
+void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ) {
+    int realSizeX = sizeX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * sizeY;
+    int index = 0;
+    int pIndex = 0;
+
+
+    int sectionStart = 0;
+    for (int z = 0; z < sizeZ; ++z) {
+        for (int y = 0; y < sizeY; ++y) {
+            sectionStart = z * realSizeZ + y * realSizeY;
+
+            for (int x = 0; x < realSizeX; ++x) {
+                // Z first
+                sp.values[index] = taskexpr.z1;
+                sp.columns[index] = z == 0 ?
+                                    x + sectionStart + realSizeZ * (sizeZ - 1) :
+                                    x + sectionStart - realSizeZ;
+                sp.pointerB[pIndex++] = index;
+                ++index;
+
+
+                // Y first
+                sp.values[index] = taskexpr.y1;
+                sp.columns[index] = y == 0 ?
+                                    x + sectionStart + realSizeY * (sizeY - 1) :
+                                    x + sectionStart - realSizeY;
+                ++index;
+
+                // X Group center
+                sp.values[index] = taskexpr.x1;
+                sp.columns[index] = sectionStart + x - 1;
+                ++index;
+
+                sp.values[index] = taskexpr.x2Comp;
+                sp.columns[index] = sectionStart + x;
+                ++index;
+
+                sp.values[index] = taskexpr.x1;
+                sp.columns[index] = sectionStart + x + 1;
+                ++index;
+
+                // Y second
+                sp.values[index] = taskexpr.y1;
+                sp.columns[index] = y == sizeY - 1 ?
+                                    x + sectionStart - realSizeY * (sizeY - 1) :
+                                    x + sectionStart + realSizeY;
+                ++index;
+
+                // Z second
+                sp.values[index] = taskexpr.z1;
+                sp.columns[index] = z == sizeZ - 1 ?
+                                    x + sectionStart - realSizeZ * (sizeZ - 1) :
+                                    x + sectionStart + realSizeZ;
+                ++index;
+
+            }
+        }
+    }
+
+    sp.pointerB[pIndex] = index + 1;   //end
+}
 
 void printVectors(SparseMatrix &sp) {
     printf("values\n");
