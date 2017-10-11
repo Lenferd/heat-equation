@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     time_S = omp_get_wtime();
 //tFinish
     for (double j = 0; j < task.tFinish; j += task.dt) {
-        multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+        multiplicateVectorAVXColumn5(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
         boundaries_matrix_fix_for_xyz(vect[currTime], task.nX, task.nY, task.nZ);
         prevTime = (prevTime + 1) % 2;
         currTime = (currTime + 1) % 2;
