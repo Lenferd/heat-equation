@@ -28,6 +28,25 @@ void multiplicateVector(SparseMatrix &sp, double *&vect, double *&result, int si
     }
 }
 
+//void multiplicateVector_wo_boundaries(SparseMatrix &sp, double *&vect, double *&result, int sizeX, int sizeY, int sizeZ) {
+//
+//    int index = 0;
+//    int sectionStart = 0;
+//    for (int z = 1; z < sizeZ + 1; ++z) {
+//        for (int y = 1; y < sizeY + 1; ++y) {
+//            sectionStart = z * (sizeX + 2) *(sizeY+2) + y * (sizeX+2);
+//            for (int x = 1 ; x < sizeX + 1; ++x) {
+//            }
+//
+//    for (int i = 0; i < size; i++) {  // iteration FOR RESULT VECTOR!!!
+//        double local_result = 0;
+//        for (int j = sp.pointerB[i]; j < sp.pointerB[i + 1]; j++) {
+//            local_result += sp.values[j] * vect[sp.columns[j]];
+//        }
+//        result[i] = local_result;
+//    }
+//}
+
 void multiplicateVectorAVXLine(SparseMatrix &sp, double *&vect, double *&result, int size) {
     int first_point_b;
     double *temp_vect = new double[8];
@@ -546,25 +565,27 @@ void fillMatrix3d6Expr_wo_boundaries(SparseMatrix &sp, MatrixValue &taskexpr, in
 }
 
 void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix &sp, MatrixValue &taskexpr, int sizeX, int sizeY, int sizeZ) {
-    int realSizeX = sizeX + 2;
-    int realSizeY = realSizeX;
-    int realSizeZ = realSizeY * sizeY;
-
     int fixedSizeX = sizeX + 2;
     int fixedSizeY = sizeY + 2;
     int fixedSizeZ = sizeZ + 2;
+
+    // size without additional boundaries xz xy)
+    int realSizeY = sizeX+2;
+    int realSizeZ = realSizeY * fixedSizeY;
+
+    // offset for section start
+    int offsetSizeZ = realSizeY * fixedSizeY;
 
     int index = 0;
     int pIndex = 0;
 
 
     int sectionStart = 0;
-    for (int z = 1; z < fixedSizeZ - 1; ++z) {
-        for (int y = 1; y < fixedSizeY - 1; ++y) {
-            sectionStart = z * realSizeZ + y * realSizeY;
+    for (int z = 0; z < fixedSizeZ; ++z) {
+        for (int y = 0; y < fixedSizeY; ++y) {
+            sectionStart = z * offsetSizeZ + y * realSizeY;
 
-            for (int x = 1; x < fixedSizeX - 1; ++x) {
-                // Z first
+            for (int x = 0; x < fixedSizeX; ++x) {
                 sp.values[index] = taskexpr.z1;
                 sp.columns[index] = x + sectionStart - realSizeZ;
                 sp.pointerB[pIndex++] = index;
@@ -573,7 +594,8 @@ void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix &sp, MatrixValue &task
 
                 // Y first
                 sp.values[index] = taskexpr.y1;
-                sp.columns[index] = x + sectionStart - realSizeY;
+                sp.columns[index] =
+                                    x + sectionStart - realSizeY;
                 ++index;
 
                 // X Group center
@@ -591,12 +613,14 @@ void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix &sp, MatrixValue &task
 
                 // Y second
                 sp.values[index] = taskexpr.y1;
-                sp.columns[index] = x + sectionStart + realSizeY;
+                sp.columns[index] =
+                                    x + sectionStart + realSizeY;
                 ++index;
 
                 // Z second
                 sp.values[index] = taskexpr.z1;
-                sp.columns[index] = x + sectionStart + realSizeZ;
+                sp.columns[index] =
+                                    x + sectionStart + realSizeZ;
                 ++index;
 
             }
@@ -637,7 +661,6 @@ void boundaries_matrix_fix(double *&vect, int sizeX, int sizeY, int sizeZ) {
             }
         }
     }
-
 }
 
 void boundaries_matrix_fix_for_xyz(double *&vect, int sizeX, int sizeY, int sizeZ) {
@@ -655,32 +678,27 @@ void boundaries_matrix_fix_for_xyz(double *&vect, int sizeX, int sizeY, int size
     // z == 0 && z == sizeZ - 1
     for (int y = 0; y < fixedSizeY; ++y) {
         sectionStart = y * realSizeY;
-        sectionEnd = (fixedSizeZ - 1) * realSizeZ;
-        for (int x = 0; x < realSizeX; ++x) {
-            vect[sectionStart + x] = vect[sectionEnd - realSizeZ + x + 1];
-            vect[sectionEnd + x] = vect[sectionStart + realSizeZ + x + 1];
+        sectionEnd = (fixedSizeZ - 1) * realSizeZ + y * realSizeY;
+        for (int x = 0; x < fixedSizeX; ++x) {
+            vect[sectionStart + x] = vect[sectionEnd - realSizeZ + x];
+            vect[sectionEnd + x] = vect[sectionStart + realSizeZ + x];
         }
     }
 
     // y == 0 && y == sizeY - 1
-    for (int z = 1; z < fixedSizeZ - 1; ++z) {
+    for (int z = 0; z < fixedSizeZ; ++z) {
         sectionStart = z * realSizeZ;
         sectionEnd = (fixedSizeY - 1) * realSizeY + z * realSizeZ;
         for (int x = 0; x < realSizeX; ++x) {
-            vect[sectionStart + x] = vect[sectionEnd - realSizeY + x + 1];
-            vect[sectionEnd + x] = vect[sectionStart + realSizeY + x + 1];
+            vect[sectionStart + x] = vect[sectionEnd - realSizeY + x];
+            vect[sectionEnd + x] = vect[sectionStart + realSizeY + x];
         }
     }
 
     // x == 0 && x == sizeX -1
-    for (int p = 0; p < realSizeZ * fixedSizeZ; p+=fixedSizeY) {
+    for (int p = 0; p < realSizeZ * fixedSizeZ; p+=realSizeY) {
         vect[p] = vect[p+1];
-        vect[p + fixedSizeY - 1] = vect[p + fixedSizeY - 2];
+        vect[p + realSizeY - 1] = vect[p + realSizeY - 2];
     }
-
-//    for (int p = 0; p < size; p+=proc.sizeY) {
-//        proc_vect[p] = proc_vect[p+1];
-//        proc_vect[p + proc.sizeY - 1] = proc_vect[p + proc.sizeY - 2];
-//    }
 
 }

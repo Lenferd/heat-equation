@@ -26,17 +26,6 @@ int main(int argc, char **argv) {
     string outfilename = argv[3];
     threads = atoi(argv[4]);
 
-
-    // File variables
-//    string functionFile = "../../../../../initial/function2.txt";
-    //string functionFile = "function2.txt";
-//    string functionFile = "../../../../../initial_for_tests/function5.txt";
-//    string functionFile = "../../initial_test/function.txt";
-//    string settingFile = "../../../../../initial/setting2.ini";
-    //string settingFile = "setting2.ini";
-//    string settingFile = "../../../../../initial_for_tests/setting5.ini";
-//    string settingFile = "../../initial_test/setting.ini";
-
     // Read task settings
     Task task;
     initTaskUsingFile(task, settingFile);
@@ -63,14 +52,14 @@ int main(int argc, char **argv) {
 
     // init and fill sparseMatrix
     SparseMatrix spMat;
-    int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+    int sparseMatrixSize = 7 * (task.nX + 2) * (task.nY + 2) * (task.nZ + 2);
 
     spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize, threads);
     fillMatrix3d6Expr_wo_boundaries_for_xyz(spMat, matrixValue, task.nX, task.nY, task.nZ);
 
     // Calculating
     time_S = omp_get_wtime();
-
+//tFinish
     for (double j = 0; j < task.tFinish; j += task.dt) {
         multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
         boundaries_matrix_fix_for_xyz(vect[currTime], task.nX, task.nY, task.nZ);
@@ -83,9 +72,18 @@ int main(int argc, char **argv) {
 
     FILE *outfile = fopen(outfilename.c_str(), "w");
 
-    for (int i = 0; i < task.fullVectSize; ++i) {
-        if (i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1)
-            fprintf(outfile, "%2.15le\n", vect[prevTime][i]);
+    int realSizeX = task.nX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * (task.nY + 2);
+
+    int offset;
+    for (int z = 1; z < task.nZ + 1; ++z) {
+        for (int y = 1; y < task.nY +1; ++y) {
+            offset = z * realSizeZ + y * realSizeY;
+            for (int x = 1; x < task.nX + 1; ++x) {
+                fprintf(outfile, "%2.15le\n", vect[prevTime][offset+x]);
+            }
+        }
     }
 
 }

@@ -43,6 +43,7 @@ void multiplicateVectorAVXColumn4(SparseMatrix &sp, double *&vect, double *&resu
 void multiplicateVectorAVXBlocks(SparseMatrix &sp, double *&vect, double *&result, int size);
 
 void multiplicateVector(SparseMatrix &sp, double *&vect, double *&result, int size);
+void multiplicateVector_wo_boundaries(SparseMatrix &sp, double *&vect, double *&result, int size);
 void multiplicateVectorRunge(SparseMatrix &sp, double *&vect, double *&additional_vect, double *&result, int size);
 
 void spMatrixInit(SparseMatrix &sp, int size, int rows, int threads);
