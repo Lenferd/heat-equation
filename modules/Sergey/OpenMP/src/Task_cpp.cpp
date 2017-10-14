@@ -5,11 +5,11 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include "Task.h"
+#include "Task_cpp.h"
 
 using std::string;
 
-int initTaskUsingFile(Task &task, string settingFile) {
+int initTaskUsingFile(Task_cpp &task, string settingFile) {
     FILE *inSettingfile = fopen(settingFile.c_str(), "r");
     if (inSettingfile == NULL) {
         printf("File reading error. Try to relocate input file\n");
@@ -62,14 +62,14 @@ int initTaskUsingFile(Task &task, string settingFile) {
     return 0;
 }
 
-void setTimestep(Task &task){
+void setTimestep(Task_cpp &task){
     task.stepX = (fabs(task.xStart) + fabs(task.xEnd)) / task.nX;
 
     task.stepY = (fabs(task.yStart) + fabs(task.yEnd)) / task.nY;
     task.stepZ = (fabs(task.zStart) + fabs(task.zEnd)) / task.nZ;
 }
 
-int initMemoryReadData(double **& vect, string file, Task &task) {
+int initMemoryReadData(double **& vect, string file, Task_cpp &task) {
     FILE *inFunctionfile = fopen(file.c_str(), "r");
 
     vect = new double*[2];
@@ -97,7 +97,7 @@ int initMemoryReadData(double **& vect, string file, Task &task) {
 }
 
 
-int initMemoryReadData_for_additional_xyz(double **& vect, string file, Task &task) {
+int initMemoryReadData_for_additional_xyz(double **& vect, string file, Task_cpp &task) {
     FILE *inFunctionfile = fopen(file.c_str(), "r");
 
     vect = new double*[2];

@@ -1,16 +1,12 @@
 //
-// Created by lenferd on 27.03.17.
+// Created by lenferd on 08.09.17.
 //
 
 #ifndef HEAT_EQUATION_TASK_H
 #define HEAT_EQUATION_TASK_H
 
-#include <iostream>
-#include <cstdio>
-#include <cstdlib>
-using std::string;
-
-struct Task {
+#include <stdio.h>
+typedef struct TaskStruct {
     double  xStart, xEnd;   // range
 
     double  yStart, yEnd;
@@ -19,21 +15,34 @@ struct Task {
     double  sigma;          //
     int     bc;             // not used
 
-    double  stepX;       // time time between calculating
-    double  stepY;
-    double  stepZ;
+    double  timeStepX;       // time time between calculating
+    double  timeStepY;
+    double  timeStepZ;
 
     int     nX;             // count of initial elements
     int     nY;
     int     nZ;
-    int     fullVectSize;
+
+    int     sizeY;
+    int     sizeZ;
+    int  fullVectSize;
 
     double  tStart, tFinish;
     double  dt;
-};
+} Task;
 
-int initTaskUsingFile(Task &task, string settingFile);
-int initMemoryReadData(double **& vect, string file, Task &task);
-int initMemoryReadData_for_additional_xyz(double **& vect, string file, Task &task);
-void setTimestep(Task &task);
+
+typedef struct ProcSettings {
+    int nX;
+    int nY;
+    int nZ;
+
+    int sizeY;
+    int sizeZ;
+
+    size_t vect_size;
+} ProcSettings;
+
+int read_settings(char *settings_path, Task *task);
+int initFunctionData_forAdditionalXYZ(char *filename, double *vect, Task *task);
 #endif //HEAT_EQUATION_TASK_H

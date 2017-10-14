@@ -1,8 +1,8 @@
 #include <iostream>
 #include <cstdlib>
-#include "Task.h"
+#include "Task_cpp.h"
 #include "omp.h"
-#include "SparseMatrix.h"
+#include "SparseMatrix_cpp.h"
 
 using std::string;
 

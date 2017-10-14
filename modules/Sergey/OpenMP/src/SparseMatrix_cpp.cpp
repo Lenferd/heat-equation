@@ -2,7 +2,7 @@
 // Created by lenferd on 27.10.16.
 //
 
-#include "SparseMatrix.h"
+#include "SparseMatrix_cpp.h"
 #include "../../MPI/include/SparseMatrix.h"
 
 void spMatrixInit(SparseMatrix &sp, int size, int rows, int threads) {

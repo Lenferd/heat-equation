@@ -5,11 +5,11 @@
 #include <iostream>
 #include <omp.h>
 #include "Task_old.h"
-#include "SparseMatrix.h"
+#include "SparseMatrix_cpp.h"
 
 using std::string;
 
-double getVectorValue(double *vect, int x, int y, int z, Task task);
+double getVectorValue(double *vect, int x, int y, int z, Task_cpp task);
 int main(int argc, char** argv) {
 
     // Timing variables
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     threads = atoi(argv[4]);
 
     // Read task settings
-    Task task;
+    Task_cpp task;
     initTaskUsingFile(task, settingFile);
     setTimestep(task);
 
@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
     }
 }
 
-double getVectorValue(double *vect, int x, int y, int z, Task task) {
+double getVectorValue(double *vect, int x, int y, int z, Task_cpp task) {
     return vect[x + (task.nX + 2) * y + (task.nX+2)*task.nY*z];
 }
 

@@ -5,7 +5,7 @@
 #ifndef STRUCTDECLAMER_H
 #define STRUCTDECLAMER_H
 
-#include "Task.h"
+#include "Task_cpp.h"
 
 struct MatrixValue {
     double x1;
