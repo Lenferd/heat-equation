@@ -32,5 +32,6 @@ void spMatrixInit(SparseMatrix *sp, int size, int rows, int threads);
 int boundariesFix_forAdditionalXYZ(double *vect, Task *task);
 void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix *sp, MatrixVal* matrVal, Task *task);
 void multiplicateVectorAVXColumn5(SparseMatrix *sp, double *vect, double *result, int size);
+void multiplicateVectorAVXColumn5_shuffle(SparseMatrix *sp, double *vect, double *result, int size);
 
 #endif //SPARSEMATRIX_SPARSEMATRIX_H

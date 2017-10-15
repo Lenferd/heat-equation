@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     time_S = omp_get_wtime();
 //tFinish
     for (double j = 0; j < task.tFinish; j += task.dt) {
-        multiplicateVectorAVXColumn5(&spMat, vect, next_vect, task.fullVectSize);
+        multiplicateVectorAVXColumn5_shuffle(&spMat, vect, next_vect, task.fullVectSize);
         boundariesFix_forAdditionalXYZ(next_vect, &task);
         tmp_vect = vect;
         vect = next_vect;

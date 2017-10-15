@@ -204,3 +204,111 @@ void multiplicateVectorAVXColumn5(SparseMatrix *sp, double *vect, double *result
         _mm256_storeu_pd(result + i, res_sum2);
     }
 }
+
+#define _MM_TRANSPOSE4_PD(row0,row1,row2,row3)                                 \
+                {                                                                \
+                    __m256d tmp3, tmp2, tmp1, tmp0;                              \
+                                                                                 \
+                    tmp0 = _mm256_shuffle_pd((row0),(row1), 0x0);                    \
+                    tmp2 = _mm256_shuffle_pd((row0),(row1), 0xF);                \
+                    tmp1 = _mm256_shuffle_pd((row2),(row3), 0x0);                    \
+                    tmp3 = _mm256_shuffle_pd((row2),(row3), 0xF);                \
+                                                                                 \
+                    (row0) = _mm256_permute2f128_pd(tmp0, tmp1, 0x20);   \
+                    (row1) = _mm256_permute2f128_pd(tmp2, tmp3, 0x20);   \
+                    (row2) = _mm256_permute2f128_pd(tmp0, tmp1, 0x31);   \
+                    (row3) = _mm256_permute2f128_pd(tmp2, tmp3, 0x31);   \
+                }
+
+void multiplicateVectorAVXColumn5_shuffle(SparseMatrix *sp, double *vect, double *result, int size) {
+
+    int *point_b;
+    int point_b_first;
+
+    double *first_values;
+    double *second_values;
+    double *third_values;
+    double *fourth_values;
+
+    for (int i = 0; i < size; i += 4) {
+        point_b = (sp->pointerB + i);
+        point_b_first = *point_b;
+
+        // first, get vect values
+        __m256d z1f = _mm256_loadu_pd(vect + sp->columns[point_b_first]);
+        __m256d y1f = _mm256_loadu_pd(vect + sp->columns[point_b_first + 1]);
+
+        __m256d x1f = _mm256_loadu_pd(vect + sp->columns[point_b_first + 2]);
+        __m256d x2Comp = _mm256_loadu_pd(vect + sp->columns[point_b_first + 3]);
+        __m256d x1s = _mm256_loadu_pd(vect + sp->columns[point_b_first + 4]);
+
+        __m256d y1s = _mm256_loadu_pd(vect + sp->columns[point_b_first + 5]);
+        __m256d z1s = _mm256_loadu_pd(vect + sp->columns[point_b_first + 6]);
+
+
+
+
+        // 8 __m256d
+        // second, get sp->values
+
+        __m256d z1fval = _mm256_loadu_pd(sp->values + point_b_first);
+//        __m256d first_values_2 = _mm256_loadu_pd(sp->values + point_b_first);
+
+        __m256d y1fval = _mm256_loadu_pd(sp->values + point_b_first + 7);
+//        __m256d second_values_2 = _mm256_loadu_pd(sp->values + point_b_first);
+
+        __m256d x1fval = _mm256_loadu_pd(sp->values + point_b_first + 14);
+
+        __m256d x2Compval = _mm256_loadu_pd(sp->values + point_b_first + 21);
+//        first_values = (sp->values + point_b_first);
+//        second_values = (sp->values + point_b_first + 7);
+//        third_values = (sp->values + point_b_first + 14);
+//        fourth_values = (sp->values + point_b_first + 21);
+
+        _MM_TRANSPOSE4_PD(z1fval, y1fval, x1fval, x2Compval);
+// and fit it to __m256d
+        __m256d x1sval = _mm256_loadu_pd(sp->values + point_b_first + 4);
+        
+        __m256d y1sval = _mm256_loadu_pd(sp->values + point_b_first + 11);
+        
+        __m256d z1sval = _mm256_loadu_pd(sp->values + point_b_first + 18);
+        
+        __m256d null = _mm256_loadu_pd(sp->values + point_b_first + 25);
+
+        _MM_TRANSPOSE4_PD(x1sval, y1sval, z1sval, null);
+
+//        __m256d z1fval = _mm256_set_pd(first_values[0], second_values[0], third_values[0], fourth_values[0]);
+//        __m256d y1fval = _mm256_set_pd(first_values[1], second_values[1], third_values[1], fourth_values[1]);
+//
+//        __m256d x1fval = _mm256_set_pd(first_values[2], second_values[2], third_values[2], fourth_values[2]);
+//        __m256d x2Compval = _mm256_set_pd(first_values[3], second_values[3], third_values[3], fourth_values[3]);
+        
+//        __m256d x1sval = _mm256_set_pd(first_values[4], second_values[4], third_values[4], fourth_values[4]);
+//
+//        __m256d y1sval = _mm256_set_pd(first_values[5], second_values[5], third_values[5], fourth_values[5]);
+//        __m256d z1sval = _mm256_set_pd(first_values[6], second_values[6], third_values[6], fourth_values[6]);
+
+// 7 __m256d
+
+        __m256d result1 = _mm256_mul_pd(z1f, z1fval);
+        __m256d result2 = _mm256_mul_pd(y1f, y1fval);
+        __m256d res_sum1 = _mm256_add_pd(result1, result2);
+
+        result1 = _mm256_mul_pd(x1f, x1fval);
+        __m256d res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+        result1 = _mm256_mul_pd(x2Comp, x2Compval);
+        res_sum1 = _mm256_add_pd(res_sum2, result1);
+
+        result1 = _mm256_mul_pd(x1s, x1sval);
+        res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+        result1 = _mm256_mul_pd(y1s, y1sval);
+        res_sum1 = _mm256_add_pd(res_sum2, result1);
+
+        result1 = _mm256_mul_pd(z1s, z1sval);
+        res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+        _mm256_storeu_pd(result + i, res_sum2);
+    }
+}
