@@ -33,44 +33,59 @@ void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix *sp, MatrixVal *matrVa
         for (int y = 0; y < fixedSizeY; ++y) {
             sectionStart = z * offsetSizeZ + y * realSizeY;
 
+            int fixBounds = 0;
+
             for (int x = 0; x < fixedSizeX; ++x) {
+                if (x == 0) {
+                    fixBounds = 1;
+                } else if ((x + 1) == fixedSizeX) {
+                    fixBounds = -1;
+                }
+                // Z first
                 sp->values[index] = matrVal->z1;
-                sp->columns[index] = x + sectionStart - realSizeZ;
+                sp->columns[index] = z == 0 ?
+                                    fixBounds + x + sectionStart + realSizeZ * (fixedSizeZ - 1) :
+                                    fixBounds + x + sectionStart - realSizeZ;
                 sp->pointerB[pIndex++] = index;
                 ++index;
 
 
                 // Y first
                 sp->values[index] = matrVal->y1;
-                sp->columns[index] =
-                        x + sectionStart - realSizeY;
+                sp->columns[index] = y == 0 ?
+                                    fixBounds + x + sectionStart + realSizeY * (fixedSizeY - 1) :
+                                    fixBounds + x + sectionStart - realSizeY;
                 ++index;
 
                 // X Group center
                 sp->values[index] = matrVal->x1;
-                sp->columns[index] = sectionStart + x - 1;
+                sp->columns[index] = sectionStart + fixBounds + x - 1;
                 ++index;
 
                 sp->values[index] = matrVal->x2Comp;
-                sp->columns[index] = sectionStart + x;
+                sp->columns[index] = sectionStart + fixBounds + x;
                 ++index;
 
                 sp->values[index] = matrVal->x1;
-                sp->columns[index] = sectionStart + x + 1;
+                sp->columns[index] = sectionStart + fixBounds + x + 1;
                 ++index;
 
                 // Y second
                 sp->values[index] = matrVal->y1;
-                sp->columns[index] =
-                        x + sectionStart + realSizeY;
+                sp->columns[index] = y == fixedSizeY - 1 ?
+                                    fixBounds + x + sectionStart - realSizeY * (fixedSizeY - 1) :
+                                    fixBounds + x + sectionStart + realSizeY;
                 ++index;
 
                 // Z second
                 sp->values[index] = matrVal->z1;
-                sp->columns[index] =
-                        x + sectionStart + realSizeZ;
+                sp->columns[index] = z == fixedSizeZ - 1 ?
+                                    fixBounds + x + sectionStart - realSizeZ * (fixedSizeZ - 1) :
+                                    fixBounds + x + sectionStart + realSizeZ;
                 ++index;
 
+                // afterloop bound fix value clearing
+                fixBounds = 0;
             }
         }
     }
@@ -116,6 +131,8 @@ int boundariesFix_forAdditionalXYZ(double *vect, Task *task) {
         vect[p] = vect[p + 1];
         vect[p + realSizeY - 1] = vect[p + realSizeY - 2];
     }
+
+    return 0;
 }
 
 void multiplicateVectorAVXColumn5(SparseMatrix *sp, double *vect, double *result, int size) {
