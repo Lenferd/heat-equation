@@ -853,3 +853,60 @@ void multiplicateVectorAVXColumn5_shuffle(SparseMatrix *sp, double *vect, double
         _mm256_storeu_pd(result + i, res_sum2);
     }
 }
+
+void multiplicateVector_values_AVX(MatrixValue *value, double *vect, double *result, int size, Task *task) {
+
+    int fixedSizeX = task->nX + 2;
+    int fixedSizeY = task->nY + 2;
+    int fixedSizeZ = task->nZ + 2;
+
+    // size without additional boundaries xz xy)
+    int realSizeY = fixedSizeX;
+    int realSizeZ = realSizeY * fixedSizeY;
+
+    // offset for section start
+
+    __m256d z1val = _mm256_set1_pd(value->z1);
+
+    __m256d y1val = _mm256_set1_pd(value->y1);
+
+    __m256d x1val = _mm256_set1_pd(value->x1);
+
+    __m256d x2Compval = _mm256_set1_pd(value->x2Comp);
+
+    for (int i = realSizeZ; i < size - realSizeZ; i += 4) {
+
+        // first, get vect values
+        __m256d z1f = _mm256_loadu_pd(vect + i - realSizeZ);
+        __m256d y1f = _mm256_loadu_pd(vect + i - realSizeY);
+
+        __m256d x1f = _mm256_loadu_pd(vect + i - 1);
+        __m256d x2Comp = _mm256_loadu_pd(vect + i);
+        __m256d x1s = _mm256_loadu_pd(vect + i + 1);
+
+        __m256d y1s = _mm256_loadu_pd(vect + i + realSizeY);
+        __m256d z1s = _mm256_loadu_pd(vect + i + realSizeZ);
+
+
+        __m256d result1 = _mm256_mul_pd(z1f, z1val);
+        __m256d result2 = _mm256_mul_pd(y1f, y1val);
+        __m256d res_sum1 = _mm256_add_pd(result1, result2);
+
+        result1 = _mm256_mul_pd(x1f, x1val);
+        __m256d res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+        result1 = _mm256_mul_pd(x2Comp, x2Compval);
+        res_sum1 = _mm256_add_pd(res_sum2, result1);
+
+        result1 = _mm256_mul_pd(x1s, x1val);
+        res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+        result1 = _mm256_mul_pd(y1s, y1val);
+        res_sum1 = _mm256_add_pd(res_sum2, result1);
+
+        result1 = _mm256_mul_pd(z1s, z1val);
+        res_sum2 = _mm256_add_pd(res_sum1, result1);
+
+        _mm256_storeu_pd(result + i, res_sum2);
+    }
+}
