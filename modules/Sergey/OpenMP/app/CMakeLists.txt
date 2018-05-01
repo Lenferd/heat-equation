@@ -22,3 +22,12 @@ file(GLOB src_implicit Implicit.cpp)
 
 add_executable(${target} ${src_implicit})
 target_link_libraries(${target} ${LIBRARY})
+
+set_target_properties(
+    "${APP}_Euler"
+    "${APP}_Runge"
+    "${APP}_Implicit"
+        PROPERTIES
+     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/Sergey_Debug
+     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/Sergey_Release
+)
