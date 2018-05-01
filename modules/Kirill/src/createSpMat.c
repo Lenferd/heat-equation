@@ -1,75 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sp_mat.h>
-#include <mpi.h>
+//
+// Created by kirill on 12.11.17.
+//
 
-#include "sp_mat.h"
-
-void initSpMat(SpMatrix *mat, size_t nz, size_t nRows) {
-  mat->nz = nz;
-  mat->nRows = nRows;
-  mat->value = (TYPE *)malloc(sizeof(TYPE) * nz);
-  mat->col = (int *)malloc(sizeof(int) * nz);
-  mat->rowIndex = (int *)malloc(sizeof(int) * (nRows) + 1);
-  memset(mat->rowIndex, 0, nRows + 1);
-}
-
-void freeSpMat(SpMatrix* mat) {
-  free(mat->value);
-  free(mat->col);
-  free(mat->rowIndex);
-}
-
-void multMV(TYPE** result, SpMatrix mat, TYPE* vec) {
-  TYPE localSum;
-  #pragma omp parallel private(localSum) if (ENABLE_PARALLEL)
-  {
-    #pragma omp for nowait
-    for (int i = 0; i < mat.nRows; i++) {
-      localSum = 0.0;
-      for (int j = mat.rowIndex[i]; j < mat.rowIndex[i + 1]; j++)
-        localSum += mat.value[j] * vec[mat.col[j]];
-      (*result)[i] = localSum;
-    }
-  }
-}
-
-void sumV(TYPE **result, TYPE *U, TYPE *k1, TYPE *k2, TYPE *k3, TYPE *k4, size_t N, double h) {
-  #pragma omp parallel for if (ENABLE_PARALLEL)
-  for (int i = 0; i < N; i++)
-    (*result)[i] = U[i] + h*(k1[i] + 2.0*k2[i] + 2.0*k3[i] + k4[i]);
-}
-
-
-void printSpMat(SpMatrix mat) {
-  for (int i = 0; i < mat.nRows; i++) {
-    for (int j = 0; j < mat.nRows; j++)
-      printf("%.0lf", procedure(mat, i, j));
-    printf("\n");
-  }
-}
-
-TYPE procedure(SpMatrix mat, int i, int j) {
-  TYPE result = 0;
-  int N1 = mat.rowIndex[i];
-  int N2 = mat.rowIndex[i+1];
-  for(int k = N1; k < N2; k++) {
-    if (mat.col[k] == j) {
-      result = mat.value[k];
-      break;
-    }
-  }
-  return result;
-}
-
-void denseMult(double **result, double **mat, double *vec, size_t dim) {
-  memset(*result, 0, dim*sizeof(double));
-  for (int x = 0; x < dim; x++) {
-    for (int i = 0;i < dim;i++)
-      (*result)[x]+=mat[x][i]*vec[i];
-  }
-}
+#include "createSpMat.h"
 
 void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY) {
   int index = 0, j, k, shiftIndex;
@@ -145,7 +78,11 @@ void createExplicitSpMat(SpMatrix *mat, TYPE coeffs[4], int dim, int NX, int NXY
     index++;
     // ***************************************
 
-    mat->rowIndex[i + 1] = mat->rowIndex[i] + 7;
+//    mat->col[index] = 0;
+//    mat->value[index] = 0.0;
+//    index++;
+
+    mat->rowIndex[i + 1] = mat->rowIndex[i] + NR;
   }
 }
 
@@ -231,8 +168,12 @@ void createExplicitSpMatV2(SpMatrix *mat, TYPE coeffs[4], int nx, int ny, int nz
         mat->value[index] = coeffs[3];
         index++;
 
+//        mat->col[index] = 0;
+//        mat->value[index] = 0.0;
+//        index++;
+
         k++;
-        mat->rowIndex[k] = mat->rowIndex[k-1] + 7;
+        mat->rowIndex[k] = mat->rowIndex[k-1] + NR ;
 
       }
 
@@ -337,7 +278,7 @@ void createExplicitSpMatV2R(SpMatrix* mat, TYPE* coeffs, int nx, int ny, int nz,
 
         // Отсутствие смещения
         mat->col[index] = realIndex;
-         mat->value[index] = coeffs[0];
+        mat->value[index] = coeffs[0];
         index++;
 
         // ***************************************
