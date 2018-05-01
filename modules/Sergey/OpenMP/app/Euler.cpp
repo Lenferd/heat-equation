@@ -1,7 +1,6 @@
 #include <iostream>
-#include <cstdlib>
+#include <omp.h>
 #include "Task.h"
-#include "omp.h"
 #include "SparseMatrix.h"
 
 using std::string;
@@ -16,8 +15,8 @@ int main(int argc, char **argv) {
     int threads = 0;
 
     if (argc != 5) {
-        printf("input data error!\n Format: setting.txt function.txt out.txt <threads>\n");
-        return 0;
+        printf("input data error!\n Format: setting.txt function.txt out.txt");
+        exit(0);
     }
 
 
@@ -52,7 +51,7 @@ int main(int argc, char **argv) {
     prevTime = 0;
     currTime = 1;
 
-    boundaries_matrix_fix(vect[0], task.nX, task.nY, task.nZ);
+    boundaries_matrix_fix(vect[prevTime], task.nX, task.nY, task.nZ);
 
     // value for the matrix
     MatrixValue matrixValue;
@@ -67,6 +66,8 @@ int main(int argc, char **argv) {
 
     spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize, threads);
     fillMatrix3d6Expr(spMat, matrixValue, task.nX, task.nY, task.nZ);
+
+
 
     // Calculating
     time_S = omp_get_wtime();

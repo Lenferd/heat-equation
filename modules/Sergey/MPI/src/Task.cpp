@@ -9,6 +9,7 @@ using std::string;
 
 int initTaskUsingFile(Task &task, string settingFile) {
     FILE *inSettingfile = fopen(settingFile.c_str(), "r");
+
     if (inSettingfile == NULL) {
         printf("File reading error. Try to relocate input file\n");
         exit(0);
@@ -61,10 +62,10 @@ int initTaskUsingFile(Task &task, string settingFile) {
 }
 
 void setTimestep(Task &task){
-    task.stepX = (fabs(task.xStart) + fabs(task.xEnd)) / task.nX;
+    task.timeStepX = (fabs(task.xStart) + fabs(task.xEnd)) / task.nX;
 
-    task.stepY = (fabs(task.yStart) + fabs(task.yEnd)) / task.nY;
-    task.stepZ = (fabs(task.zStart) + fabs(task.zEnd)) / task.nZ;
+    task.timeStepY = (fabs(task.xStart) + fabs(task.xEnd)) / task.nY;
+    task.timeStepZ = (fabs(task.xStart) + fabs(task.xEnd)) / task.nZ;
 }
 
 int initMemoryReadData(double **& vect, string file, Task &task) {
@@ -100,15 +101,26 @@ int initMemoryReadDataMPI(double *& vect, string file, Task &task) {
     task.fullVectSize = (task.nX + 2) * (task.nY) * (task.nZ);
     vect = new double[task.fullVectSize];
 
+    for (int l = 0; l < task.fullVectSize; ++l) {
+        vect[l] = 0;
+    }
+
+    int was_scannned = 0;
     /// Read file
     for (int k = 0; k < task.nZ; k++) {
         for (int j = 0; j < task.nY; ++j) {
             for (int i = 1; i < task.nX + 1; ++i) {
-                fscanf(inFunctionfile, "%lf\n", &vect[i + (task.nX + 2) * j + (task.nX+2) * task.nY * k]);
+                was_scannned += fscanf(inFunctionfile, "%lf\n", &vect[i + (task.nX + 2) * j + (task.nX+2) * task.nY * k]);
             }
         }
     }
 
     fclose(inFunctionfile);
+
+    if (was_scannned != task.nX * task.nY * task.nZ) {
+        printf("Data reading error\n");
+        exit(-3);
+    }
+
     return 0;
 }

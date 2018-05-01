@@ -1,12 +1,14 @@
 //
-// Created by lenferd on 08.09.17.
+// Created by lenferd on 27.03.17.
 //
 
 #ifndef HEAT_EQUATION_TASK_H
 #define HEAT_EQUATION_TASK_H
 
-#include <stdio.h>
-typedef struct TaskStruct {
+#include <iostream>
+using std::string;
+
+struct Task {
     double  xStart, xEnd;   // range
 
     double  yStart, yEnd;
@@ -22,27 +24,14 @@ typedef struct TaskStruct {
     int     nX;             // count of initial elements
     int     nY;
     int     nZ;
-
-    int     sizeY;
-    int     sizeZ;
-    size_t  fullVectSize;
+    int     fullVectSize;
 
     double  tStart, tFinish;
     double  dt;
-} Task;
+};
 
-
-typedef struct ProcSettings {
-    int nX;
-    int nY;
-    int nZ;
-
-    int sizeY;
-    int sizeZ;
-
-    size_t vect_size;
-} ProcSettings;
-
-int read_settings(char *settings_path, Task *task);
-int initFunctionMPI(char *function_path, double* vect, Task *task);
+int initTaskUsingFile(Task &task, string settingFile);
+int initMemoryReadData(double **& vect, string file, Task &task);
+int initMemoryReadDataMPI(double *& vect, string file, Task &task);
+void setTimestep(Task &task);
 #endif //HEAT_EQUATION_TASK_H
