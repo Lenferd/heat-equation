@@ -3,6 +3,8 @@
 //
 
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include "Task.h"
 
 using std::string;
@@ -11,7 +13,7 @@ int initTaskUsingFile(Task &task, string settingFile) {
     FILE *inSettingfile = fopen(settingFile.c_str(), "r");
     if (inSettingfile == NULL) {
         printf("File reading error. Try to relocate input file\n");
-        exit(0);
+        exit(-1);
     }
 
 //    XSTART=-1.0
@@ -94,21 +96,30 @@ int initMemoryReadData(double **& vect, string file, Task &task) {
     return 0;
 }
 
-int initMemoryReadDataMPI(double *& vect, string file, Task &task) {
+
+int initMemoryReadData_for_additional_xyz(double **& vect, string file, Task &task) {
     FILE *inFunctionfile = fopen(file.c_str(), "r");
 
-    task.fullVectSize = (task.nX + 2) * (task.nY) * (task.nZ);
-    vect = new double[task.fullVectSize];
+    vect = new double*[2];
+    task.fullVectSize = (task.nX + 2) * (task.nY + 2) * (task.nZ + 2);
+    vect[0] = new double[task.fullVectSize];
+    vect[1] = new double[task.fullVectSize];
 
+    int scan_value = 0;
     /// Read file
-    for (int k = 0; k < task.nZ; k++) {
-        for (int j = 0; j < task.nY; ++j) {
+    for (int z = 1; z < task.nZ + 1; z++) {
+        for (int y = 1; y < task.nY + 1; ++y) {
             for (int i = 1; i < task.nX + 1; ++i) {
-                fscanf(inFunctionfile, "%lf\n", &vect[i + (task.nX + 2) * j + (task.nX+2) * task.nY * k]);
+                scan_value += fscanf(inFunctionfile, "%lf\n",
+                                     &vect[0][i + (task.nX + 2) * y + (task.nX + 2) * (task.nY + 2) * z]);
             }
         }
     }
 
     fclose(inFunctionfile);
+    if (scan_value != task.nX * task.nY * task.nZ) {
+        printf("Data reading error\n");
+        exit(-3);
+    }
     return 0;
 }

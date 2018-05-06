@@ -1,6 +1,6 @@
 #include <iostream>
-#include <omp.h>
 #include "Task.h"
+#include "omp.h"
 #include "SparseMatrix.h"
 
 using std::string;
@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
     if (argc != 5) {
         printf("input data error!\n Format: setting.txt function.txt out.txt <threads>\n");
-        exit(0);
+        return 0;
     }
 
 
@@ -24,17 +24,6 @@ int main(int argc, char **argv) {
     string functionFile = argv[2];
     string outfilename = argv[3];
     threads = atoi(argv[4]);
-
-
-    // File variables
-//    string functionFile = "../../../../../initial/function2.txt";
-    //string functionFile = "function2.txt";
-//    string functionFile = "../../../../../initial_for_tests/function5.txt";
-//    string functionFile = "../../initial_test/function.txt";
-//    string settingFile = "../../../../../initial/setting2.ini";
-    //string settingFile = "setting2.ini";
-//    string settingFile = "../../../../../initial_for_tests/setting5.ini";
-//    string settingFile = "../../initial_test/setting.ini";
 
     // Read task settings
     Task task;
@@ -45,13 +34,13 @@ int main(int argc, char **argv) {
 
     // Init memory & read function file
     double **vect;
-    initMemoryReadData(vect, functionFile, task);
+    initMemoryReadData_for_additional_xyz(vect, functionFile, task);
 
     // vector time-index for loop
     prevTime = 0;
     currTime = 1;
 
-    boundaries_matrix_fix(vect[prevTime], task.nX, task.nY, task.nZ);
+    boundaries_matrix_fix_for_xyz(vect[0], task.nX, task.nY, task.nZ);
 
     // value for the matrix
     MatrixValue matrixValue;
@@ -61,19 +50,22 @@ int main(int argc, char **argv) {
     matrixValue.x2Comp = (1 - 2 * matrixValue.x1 - 2 * matrixValue.y1 - 2 * matrixValue.z1);
 
     // init and fill sparseMatrix
-    SparseMatrix spMat;
-    int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+//    SparseMatrix spMat;
+//    int sparseMatrixSize = 7 * (task.nX + 2) * (task.nY + 2) * (task.nZ + 2);
 
-    spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize, threads);
-    fillMatrix3d6Expr(spMat, matrixValue, task.nX, task.nY, task.nZ);
-
-
-
-    // Calculating
+//    spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize, threads);
+//    fillMatrix3d6Expr_wo_boundaries_for_xyz(spMat, matrixValue, task.nX, task.nY, task.nZ);
+//
+//     Calculating
     time_S = omp_get_wtime();
+//tFinish
 
     for (double j = 0; j < task.tFinish; j += task.dt) {
-        multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+//        multiplicateVectorAVXColumn5_shuffle(&spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+//        multiplicateVectorAVXColumn5(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+//        multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+        multiplicateVector_values_AVX(&matrixValue, vect[prevTime], vect[currTime], task.fullVectSize, &task);
+        boundaries_matrix_fix_for_xyz(vect[currTime], task.nX, task.nY, task.nZ);
         prevTime = (prevTime + 1) % 2;
         currTime = (currTime + 1) % 2;
     }
@@ -81,18 +73,20 @@ int main(int argc, char **argv) {
     printf("Run time %.15lf\n", time_E - time_S);
     printf("On %d threads\n", threads);
 
-    // Output
-//    string outfilename = "../../../../../result/Sergey-N/Openmp_Euler_1.txt";
-
-    //string outfilename = "accurancy_test/stepX_" + std::to_string(task.stepX) + "_stepT_" +
-    //        std::to_string(task.dt)+ ".txt";
-    //string outfilename = "accurancy_test/res.txt";
-
     FILE *outfile = fopen(outfilename.c_str(), "w");
 
-    for (int i = 0; i < task.fullVectSize; ++i) {
-        if (i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1)
-            fprintf(outfile, "%2.15le\n", vect[prevTime][i]);
+    int realSizeX = task.nX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * (task.nY + 2);
+
+    int offset;
+    for (int z = 1; z < task.nZ + 1; ++z) {
+        for (int y = 1; y < task.nY +1; ++y) {
+            offset = z * realSizeZ + y * realSizeY;
+            for (int x = 1; x < task.nX + 1; ++x) {
+                fprintf(outfile, "%2.15le\n", vect[prevTime][offset+x]);
+            }
+        }
     }
 
 }
