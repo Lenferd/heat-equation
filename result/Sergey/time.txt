@@ -1,0 +1,13 @@
+lenferd@lenferd-pc:~/Programming/C&C++/heat-equation/_build/Sergey_Release$ ./app_Sergey_OpenMP_Runge initial/Sergey/setting2.ini initial/Sergey/function2-65.txt Sergey/test.txt 4
+Run time 86.140463961997739
+On 4 threads
+lenferd@lenferd-pc:~/Programming/C&C++/heat-equation/_build/Sergey_Release$ ./app_Sergey_OpenMP_Implicit initial/Sergey/setting2.ini initial/Sergey/function2-65.txt Sergey/te2st.txt 4
+x 0.004225
+y 0.004225
+z 0.004225
+dw 1.025350
+Run time 77.866576475000329
+lenferd@lenferd-pc:~/Programming/C&C++/heat-equation/_build/Sergey_Release$ ./app_Sergey_OpenMP_Euler initial/Sergey/setting2.ini initial/Sergey/function2-65.txt Sergey/te2st.txt 4
+Run time 16.916155386999890
+On 4 threads
+
