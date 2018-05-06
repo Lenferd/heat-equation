@@ -27,8 +27,8 @@ done
 
 Build () {
     root_dir="$( pwd )"
-    mkdir build
-    cd build
+    mkdir _build
+    cd _build
     echo $root_dir
     if [ "$BUILD_MODE" == "debug" ]; then
         BUILD_MODE="Debug"
@@ -38,13 +38,22 @@ Build () {
 
     cmake -DCMAKE_BUILD_TYPE=$BUILD_MODE $root_dir
     make -j4
+
+    cd ..
+    SetLink
 }
 
 Clear() {
-  if [ -d build ]
+  if [ -d _build ]
     then
-    rm -rf ./build
+    rm -rf ./_build
   fi
+}
+
+SetLink() {
+        ln -sf "$(pwd)/initial" "$(pwd)/_build/Sergey_$BUILD_MODE/"
+        ln -sf $(pwd)/modules/Sergey/setting2.ini $(pwd)/_build/Sergey_$BUILD_MODE/setting2.ini
+        ln -sf "$(pwd)/result/Sergey" "$(pwd)/_build/Sergey_$BUILD_MODE/"
 }
 
 Build

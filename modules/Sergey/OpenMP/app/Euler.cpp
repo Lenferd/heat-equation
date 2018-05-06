@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
     int threads = 0;
 
     if (argc != 5) {
-        printf("input data error!\n Format: setting.txt function.txt out.txt");
+        printf("input data error!\n Format: setting.txt function.txt out.txt <threads>\n");
         exit(0);
     }
 
