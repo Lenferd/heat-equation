@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     int threads;
 
     if (argc != 5) {
-        printf("input data error!\n Format: setting.txt function.txt out.txt");
+        printf("input data error!\n Format: setting.txt function.txt out.txt <threads>\n");
         exit(0);
     }
 
@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
 
     // Init memory & read function file
     double** vect;
-    initMemoryReadData(vect, functionFile, task);
-
+    // initMemoryReadData(vect, functionFile, task);
+    initMemoryReadData_for_additional_xyz(vect, functionFile, task);
 
     double* vectK1 = new double[task.fullVectSize];
     double* vectK2 = new double[task.fullVectSize];
@@ -48,8 +48,8 @@ int main(int argc, char** argv) {
     prevTime = 0;
     currTime = 1;
 
-    boundaries_matrix_fix(vect[prevTime], task.nX, task.nY, task.nZ);
-
+    // boundaries_matrix_fix(vect[prevTime], task.nX, task.nY, task.nZ);
+    boundaries_matrix_fix_for_xyz(vect[0], task.nX, task.nY, task.nZ);
     /***
      * K1 Vector
      */
@@ -68,11 +68,12 @@ int main(int argc, char** argv) {
 
     // init and fill sparseMatrix
     SparseMatrix spMatK1;
-    int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+    // int sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+    int sparseMatrixSize = 7 * (task.nX + 2) * (task.nY + 2) * (task.nZ + 2);
 
     spMatrixInit(spMatK1, sparseMatrixSize, task.fullVectSize, threads);
-    fillMatrix3d6Expr(spMatK1, matrixValueK1, task.nX, task.nY, task.nZ);
-
+    // fillMatrix3d6Expr(spMatK1, matrixValueK1, task.nX, task.nY, task.nZ);
+    fillMatrix3d6Expr_wo_boundaries_for_xyz(spMatK1, matrixValueK1, task.nX, task.nY, task.nZ);
     /***
     * K2
     */
@@ -90,11 +91,11 @@ int main(int argc, char** argv) {
 //    printf("x2C %lf\t", matrixValueK2.x2Comp);
     // init and fill sparseMatrix
     SparseMatrix spMatK2;
-    sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+    // sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
 
     spMatrixInit(spMatK2, sparseMatrixSize, task.fullVectSize, threads);
-    fillMatrix3d6Expr(spMatK2, matrixValueK2, task.nX, task.nY, task.nZ);
-
+    // fillMatrix3d6Expr(spMatK2, matrixValueK2, task.nX, task.nY, task.nZ);
+    fillMatrix3d6Expr_wo_boundaries_for_xyz(spMatK2, matrixValueK2, task.nX, task.nY, task.nZ);
 
     /***
     * K3
@@ -113,11 +114,11 @@ int main(int argc, char** argv) {
 //    printf("x2C %lf\t", matrixValueK3.x2Comp);
     // init and fill sparseMatrix
     SparseMatrix spMatK3;
-    sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+    // sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
 
     spMatrixInit(spMatK3, sparseMatrixSize, task.fullVectSize, threads);
-    fillMatrix3d6Expr(spMatK3, matrixValueK3, task.nX, task.nY, task.nZ);
-
+    // fillMatrix3d6Expr(spMatK3, matrixValueK3, task.nX, task.nY, task.nZ);
+    fillMatrix3d6Expr_wo_boundaries_for_xyz(spMatK3, matrixValueK3, task.nX, task.nY, task.nZ);
     /***
     * K4 Vector
     */
@@ -136,20 +137,30 @@ int main(int argc, char** argv) {
 
     // init and fill sparseMatrix
     SparseMatrix spMatK4;
-    sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
+    // sparseMatrixSize = 9 * task.nX * task.nY * task.nZ;
 
     spMatrixInit(spMatK4, sparseMatrixSize, task.fullVectSize, threads);
-    fillMatrix3d6Expr(spMatK4, matrixValueK4, task.nX, task.nY, task.nZ);
-
+    // fillMatrix3d6Expr(spMatK4, matrixValueK4, task.nX, task.nY, task.nZ);
+    fillMatrix3d6Expr_wo_boundaries_for_xyz(spMatK4, matrixValueK4, task.nX, task.nY, task.nZ);
     // Calculating
     time_S = omp_get_wtime();
 
     for (double j = 0; j < task.tFinish; j += task.dt) {
-        multiplicateVector(spMatK1, vect[prevTime], vectK1, task.fullVectSize);
-        multiplicateVector(spMatK2, vectK1, vectK2, task.fullVectSize);
-        multiplicateVectorRunge(spMatK3, vectK2, vectK1, vectK3, task.fullVectSize);
-        multiplicateVectorRunge(spMatK4, vectK3, vectK1, vectK4, task.fullVectSize);
+        // multiplicateVector(spMatK1, vect[prevTime], vectK1, task.fullVectSize);
+        // multiplicateVector(spMatK2, vectK1, vectK2, task.fullVectSize);
+        // multiplicateVectorRunge(spMatK3, vectK2, vectK1, vectK3, task.fullVectSize);
+        // multiplicateVectorRunge(spMatK4, vectK3, vectK1, vectK4, task.fullVectSize);
 
+        multiplicateVectorAVXColumn5_shuffle(&spMatK1, vect[prevTime], vectK1, task.fullVectSize);
+        boundaries_matrix_fix_for_xyz(vectK1, task.nX, task.nY, task.nZ);
+        multiplicateVectorAVXColumn5_shuffle(&spMatK2, vectK1, vectK2, task.fullVectSize);
+        boundaries_matrix_fix_for_xyz(vectK2, task.nX, task.nY, task.nZ);
+        // multiplicateVectorAVXColumn5_shuffle(&spMatK3, vectK2, vectK3, task.fullVectSize);
+        multiplicateVectorRunge(spMatK3, vectK2, vectK1, vectK3, task.fullVectSize);
+        boundaries_matrix_fix_for_xyz(vectK3, task.nX, task.nY, task.nZ);
+        // multiplicateVectorAVXColumn5_shuffle(&spMatK4, vectK3, vectK4, task.fullVectSize);
+        multiplicateVectorRunge(spMatK4, vectK3, vectK1, vectK4, task.fullVectSize);
+        boundaries_matrix_fix_for_xyz(vectK4, task.nX, task.nY, task.nZ);
         #pragma omp parallel for
         for (int i = 0; i < task.fullVectSize; ++i) {
 //            if (i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1) {
@@ -159,7 +170,7 @@ int main(int argc, char** argv) {
 //                vect[currTime][i] = vect[prevTime][i];
 //            }
         }
-
+        boundaries_matrix_fix_for_xyz(vect[currTime], task.nX, task.nY, task.nZ);
 //        boundaries_matrix_fix(vect[currTime], vect[prevTime], task.nX, task.nY, task.nZ);
 
         prevTime = (prevTime + 1) % 2;
@@ -172,14 +183,21 @@ int main(int argc, char** argv) {
     // Output
     FILE *outfile = fopen(outfilename.c_str(), "w");
 
-//    double outData;
-    for (int i = 0; i < task.fullVectSize; ++i) {
-        if (i % (task.nX + 2) != 0 && i % (task.nX + 2) != task.nX + 1)
-            fprintf(outfile, "%2.15le\n", vect[0][i]);
+    int realSizeX = task.nX + 2;
+    int realSizeY = realSizeX;
+    int realSizeZ = realSizeY * (task.nY + 2);
+
+    int offset;
+    for (int z = 1; z < task.nZ + 1; ++z) {
+        for (int y = 1; y < task.nY +1; ++y) {
+            offset = z * realSizeZ + y * realSizeY;
+            for (int x = 1; x < task.nX + 1; ++x) {
+                fprintf(outfile, "%2.15le\n", vect[prevTime][offset+x]);
+            }
+        }
     }
 }
 
 double getVectorValue(double *vect, int x, int y, int z, Task task) {
     return vect[x + (task.nX + 2) * y + (task.nX+2)*task.nY*z];
 }
-
