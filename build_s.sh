@@ -52,8 +52,9 @@ Clear() {
 
 SetLink() {
         ln -sf "$(pwd)/initial" "$(pwd)/_build/Sergey_$BUILD_MODE/"
-        ln -sf $(pwd)/modules/Sergey/setting2.ini $(pwd)/_build/Sergey_$BUILD_MODE/setting2.ini
+        ln -sf $(pwd)/initial/Sergey/setting2.ini $(pwd)/_build/Sergey_$BUILD_MODE/setting2.ini
         ln -sf "$(pwd)/result/Sergey" "$(pwd)/_build/Sergey_$BUILD_MODE/"
 }
 
 Build
+# ln -s script/Sergey
