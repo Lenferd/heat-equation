@@ -51,8 +51,8 @@ int main(int argc, char **argv) {
 
     // init and fill sparseMatrix
    SparseMatrix spMat;
-   int sparseMatrixSize = 7 * (task.nX + 2) * (task.nY + 2) * (task.nZ + 2);
-
+   const unsigned int sparseMatrixSize = 7 * (task.nX + 2) * (task.nY + 2) * (task.nZ + 2);
+   printf("%d", sparseMatrixSize);
    spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize, threads);
    fillMatrix3d6Expr_wo_boundaries_for_xyz(spMat, matrixValue, task.nX, task.nY, task.nZ);
 //
@@ -62,9 +62,9 @@ int main(int argc, char **argv) {
 
     for (double j = 0; j < task.tFinish; j += task.dt) {
        multiplicateVectorAVXColumn5_shuffle(&spMat, vect[prevTime], vect[currTime], task.fullVectSize);
-//        multiplicateVectorAVXColumn5(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+       // multiplicateVectorAVXColumn5(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
        // multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
-        // multiplicateVector_values_AVX(&matrixValue, vect[prevTime], vect[currTime], task.fullVectSize, &task);
+        // multiplicateVector_values_AVX(&matrixValue, vect[prevTime], vect[currTime], task.fullVectSize, &task, &spMat);
         boundaries_matrix_fix_for_xyz(vect[currTime], task.nX, task.nY, task.nZ);
         prevTime = (prevTime + 1) % 2;
         currTime = (currTime + 1) % 2;
@@ -89,4 +89,6 @@ int main(int argc, char **argv) {
         }
     }
 
+    free(vect[0]);
+    free(vect[1]);
 }

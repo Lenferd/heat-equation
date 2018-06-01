@@ -5,7 +5,10 @@
 #include "SparseMatrix.h"
 #include "../../MPI/include/SparseMatrix.h"
 
-void spMatrixInit(SparseMatrix &sp, int size, int rows, int threads) {
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
+void spMatrixInit(SparseMatrix &sp, const unsigned int size, const int rows, const int threads) {
     sp._size = size;
     sp._rows = rows;
     sp.values = new double[size];
@@ -266,12 +269,12 @@ void multiplicateVectorAVXColumn3(SparseMatrix &sp, double *&vect, double *&resu
     }
 }
 
-void multiplicateVectorPart(SparseMatrix &sp, double *&vect, double *&result, int start, int size) {
+void multiplicateVectorPart(SparseMatrix &sp, double *&vect, double *&result, int start, int end) {
 
     omp_set_num_threads(sp.threads);
 
     #pragma omp parallel for
-    for (int i = start; i < start + size; i++) {  // iteration FOR RESULT VECTOR!!!
+    for (int i = start; i < end - 1; i++) {  // iteration FOR RESULT VECTOR!!!
         double local_result = 0;
         for (int j = sp.pointerB[i]; j < sp.pointerB[i + 1]; j++) {
             local_result += sp.values[j] * vect[sp.columns[j]];
@@ -381,6 +384,8 @@ void multiplicateVectorAVXColumn5(SparseMatrix &sp, double *&vect, double *&resu
     double *third_values;
     double *fourth_values;
 
+    omp_set_num_threads(sp.threads);
+    #pragma omp parallel for
     for (int i = 0; i < size; i += 4) {
         point_b = (sp.pointerB + i);
         point_b_first = *point_b;
@@ -646,6 +651,9 @@ void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix &sp, MatrixValue &task
     // offset for section start
     int offsetSizeZ = realSizeY * fixedSizeY;
 
+    int max_index = fixedSizeX * fixedSizeY * fixedSizeZ - 1 - 4; // Can't load last 4
+    printf("MAX %d\n", max_index);
+
     int index = 0;
     int pIndex = 0;
 
@@ -654,45 +662,39 @@ void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix &sp, MatrixValue &task
     for (int z = 0; z < fixedSizeZ; ++z) {
         for (int y = 0; y < fixedSizeY; ++y) {
             sectionStart = z * offsetSizeZ + y * realSizeY;
-
             for (int x = 0; x < fixedSizeX; ++x) {
                 sp.values[index] = taskexpr.z1;
-                sp.columns[index] = x + sectionStart - realSizeZ;
+                sp.columns[index] = MAX(x + sectionStart - realSizeZ, 0);
                 sp.pointerB[pIndex++] = index;
                 ++index;
 
-
                 // Y first
                 sp.values[index] = taskexpr.y1;
-                sp.columns[index] =
-                                    x + sectionStart - realSizeY;
+                sp.columns[index] = MAX(x + sectionStart - realSizeY, 0);
                 ++index;
 
                 // X Group center
                 sp.values[index] = taskexpr.x1;
-                sp.columns[index] = sectionStart + x - 1;
+                sp.columns[index] = MAX(sectionStart + x - 1, 0);
                 ++index;
 
                 sp.values[index] = taskexpr.x2Comp;
-                sp.columns[index] = sectionStart + x;
+                sp.columns[index] = MIN(sectionStart + x, max_index) ;
                 ++index;
 
                 sp.values[index] = taskexpr.x1;
-                sp.columns[index] = sectionStart + x + 1;
+                sp.columns[index] = MIN(sectionStart + x + 1, max_index);
                 ++index;
 
                 // Y second
                 sp.values[index] = taskexpr.y1;
-                sp.columns[index] =
-                                    x + sectionStart + realSizeY;
+                sp.columns[index] = MIN(x + sectionStart + realSizeY, max_index);
                 ++index;
 
                 // Z second
                 sp.values[index] = taskexpr.z1;
-                sp.columns[index] =
-                                    x + sectionStart + realSizeZ;
+                sp.columns[index] = MIN(x + sectionStart + realSizeZ, max_index);
                 ++index;
-
             }
         }
     }
@@ -796,9 +798,12 @@ void multiplicateVectorAVXColumn5_shuffle(SparseMatrix *sp, double *vect, double
     double *second_values;
     double *third_values;
     double *fourth_values;
-
-    for (int i = 0; i < size; i += 4) {
+    omp_set_num_threads(sp->threads);
+    #pragma omp parallel for
+    for (int i = 0; i < size - 3; i += 4) {
+        // printf("=%d\n", i);
         point_b_first = *(sp->pointerB + i);
+        // printf("=======%d\n", point_b_first);
 
         // first, get vect values
         __m256d z1f = _mm256_loadu_pd(vect + sp->columns[point_b_first]);
@@ -811,7 +816,7 @@ void multiplicateVectorAVXColumn5_shuffle(SparseMatrix *sp, double *vect, double
         __m256d y1s = _mm256_loadu_pd(vect + sp->columns[point_b_first + 5]);
         __m256d z1s = _mm256_loadu_pd(vect + sp->columns[point_b_first + 6]);
 
-
+        // Don't forget, it's load 4 number each
         __m256d z1fval = _mm256_loadu_pd(sp->values + point_b_first);
 
         __m256d y1fval = _mm256_loadu_pd(sp->values + point_b_first + 7);
@@ -852,9 +857,14 @@ void multiplicateVectorAVXColumn5_shuffle(SparseMatrix *sp, double *vect, double
 
         _mm256_storeu_pd(result + i, res_sum2);
     }
+    // Mult remaining
+    unsigned int remained = size % 4;
+    if (remained) {
+        multiplicateVectorPart(*sp, vect, result, size - remained, size);
+    }
 }
 
-void multiplicateVector_values_AVX(MatrixValue *value, double *vect, double *result, int size, Task *task) {
+void multiplicateVector_values_AVX(MatrixValue *value, double *vect, double *result, int size, Task *task, SparseMatrix *sp) {
 
     int fixedSizeX = task->nX + 2;
     int fixedSizeY = task->nY + 2;
@@ -874,6 +884,8 @@ void multiplicateVector_values_AVX(MatrixValue *value, double *vect, double *res
 
     __m256d x2Compval = _mm256_set1_pd(value->x2Comp);
 
+    omp_set_num_threads(sp->threads);
+    #pragma omp parallel for
     for (int i = realSizeZ; i < size - realSizeZ; i += 4) {
 
         // first, get vect values

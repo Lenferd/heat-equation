@@ -42,7 +42,7 @@ void multiplicateVectorAVXColumn4(SparseMatrix &sp, double *&vect, double *&resu
 void multiplicateVectorAVXColumn5(SparseMatrix &sp, double *&vect, double *&result, int size);
 void multiplicateVectorAVXColumn5_shuffle(SparseMatrix *sp, double *vect, double *result, int size);
 
-void multiplicateVector_values_AVX(MatrixValue *value, double *vect, double *result, int size, Task *task);
+void multiplicateVector_values_AVX(MatrixValue *value, double *vect, double *result, int size, Task *task, SparseMatrix *sp);
 
 void multiplicateVectorAVXBlocks(SparseMatrix &sp, double *&vect, double *&result, int size);
 
@@ -50,7 +50,7 @@ void multiplicateVector(SparseMatrix &sp, double *&vect, double *&result, int si
 void multiplicateVector_wo_boundaries(SparseMatrix &sp, double *&vect, double *&result, int size);
 void multiplicateVectorRunge(SparseMatrix &sp, double *&vect, double *&additional_vect, double *&result, int size);
 
-void spMatrixInit(SparseMatrix &sp, int size, int rows, int threads);
+void spMatrixInit(SparseMatrix &sp, const unsigned int size, const int rows, const int threads);
 void printVectors(SparseMatrix &sp);
 
 
