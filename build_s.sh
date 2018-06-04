@@ -18,6 +18,12 @@ or  $./build.sh , and this should be release conf
         -c|--clear)
             Clear
             ;;
+	-i|--intel)
+	    echo "Using intel compiler"
+	    source /opt/intel/bin/compilervars.sh intel64
+	    export CC=icc
+	    export CXX=icpc
+	    ;;
         *)
             ;;
     esac

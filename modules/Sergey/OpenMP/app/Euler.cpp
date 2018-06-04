@@ -52,19 +52,33 @@ int main(int argc, char **argv) {
     // init and fill sparseMatrix
    SparseMatrix spMat;
    const unsigned int sparseMatrixSize = 7 * (task.nX + 2) * (task.nY + 2) * (task.nZ + 2);
-   printf("%d", sparseMatrixSize);
+   // printf("%d", sparseMatrixSize);
    spMatrixInit(spMat, sparseMatrixSize, task.fullVectSize, threads);
    fillMatrix3d6Expr_wo_boundaries_for_xyz(spMat, matrixValue, task.nX, task.nY, task.nZ);
 //
 //     Calculating
     time_S = omp_get_wtime();
-//tFinish
+
+    #ifdef AVX_SHUFFLE
+        printf("Running AVX_SHUFFLE\n");
+    #elif NAIVE
+        printf("Running NAIVE\n");
+    #elif AVX_NAIVE
+        printf("Running AVX_NAIVE\n");
+    #else
+        printf("Running default Euler\n");
+    #endif
 
     for (double j = 0; j < task.tFinish; j += task.dt) {
-       multiplicateVectorAVXColumn5_shuffle(&spMat, vect[prevTime], vect[currTime], task.fullVectSize);
-       // multiplicateVectorAVXColumn5(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
-       // multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
-        // multiplicateVector_values_AVX(&matrixValue, vect[prevTime], vect[currTime], task.fullVectSize, &task, &spMat);
+        #ifdef AVX_SHUFFLE
+            multiplicateVectorAVXColumn5_shuffle(&spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+        #elif NAIVE
+            multiplicateVectorValues(&matrixValue, vect[prevTime], vect[currTime], task.fullVectSize, &task, &spMat);
+        #elif AVX_NAIVE
+            multiplicateVector_values_AVX(&matrixValue, vect[prevTime], vect[currTime], task.fullVectSize, &task, &spMat);
+        #else
+            multiplicateVector(spMat, vect[prevTime], vect[currTime], task.fullVectSize);
+        #endif
         boundaries_matrix_fix_for_xyz(vect[currTime], task.nX, task.nY, task.nZ);
         prevTime = (prevTime + 1) % 2;
         currTime = (currTime + 1) % 2;

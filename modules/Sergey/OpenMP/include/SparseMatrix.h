@@ -43,6 +43,7 @@ void multiplicateVectorAVXColumn5(SparseMatrix &sp, double *&vect, double *&resu
 void multiplicateVectorAVXColumn5_shuffle(SparseMatrix *sp, double *vect, double *result, int size);
 
 void multiplicateVector_values_AVX(MatrixValue *value, double *vect, double *result, int size, Task *task, SparseMatrix *sp);
+void multiplicateVectorValues(MatrixValue *value, double *vect, double *result, int size, Task *task, SparseMatrix *sp);
 
 void multiplicateVectorAVXBlocks(SparseMatrix &sp, double *&vect, double *&result, int size);
 

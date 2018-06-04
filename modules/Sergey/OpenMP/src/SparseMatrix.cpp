@@ -652,7 +652,7 @@ void fillMatrix3d6Expr_wo_boundaries_for_xyz(SparseMatrix &sp, MatrixValue &task
     int offsetSizeZ = realSizeY * fixedSizeY;
 
     int max_index = fixedSizeX * fixedSizeY * fixedSizeZ - 1 - 4; // Can't load last 4
-    printf("MAX %d\n", max_index);
+    // printf("MAX %d\n", max_index);
 
     int index = 0;
     int pIndex = 0;
@@ -920,5 +920,29 @@ void multiplicateVector_values_AVX(MatrixValue *value, double *vect, double *res
         res_sum2 = _mm256_add_pd(res_sum1, result1);
 
         _mm256_storeu_pd(result + i, res_sum2);
+    }
+}
+
+void multiplicateVectorValues(MatrixValue *value, double *vect, double *result, int size, Task *task, SparseMatrix *sp) {
+
+    int fixedSizeX = task->nX + 2;
+    int fixedSizeY = task->nY + 2;
+    int fixedSizeZ = task->nZ + 2;
+
+    // size without additional boundaries xz xy)
+    int realSizeY = fixedSizeX;
+    int realSizeZ = realSizeY * fixedSizeY;
+
+    omp_set_num_threads(sp->threads);
+
+    #pragma omp parallel for
+    for (int i = realSizeZ; i < size - realSizeZ; i ++) {  // iteration FOR RESULT VECTOR!!!
+        result[i] = vect[i - realSizeZ] * value->z1 +
+         vect[i - realSizeY] * value->y1 +
+         vect[i - 1] * value->x1 +
+         vect[i] * value->x2Comp +
+         vect[i + 1] * value->x1 +
+         vect[i + realSizeY] * value->y1 +
+         vect[i + realSizeZ] * value->z1;
     }
 }
