@@ -1,6 +1,7 @@
 # Directory
 build/
+_build/
+
 .idea/
-initial_test
-build_debug
-build_release
+
+result/Kirill
